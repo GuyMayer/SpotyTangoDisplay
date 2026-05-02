@@ -1,0 +1,340 @@
+// control.js — DJ control panel logic
+
+const Control = (() => {
+
+  let _mode = 'milonga';         // 'milonga' | 'lesson'
+  let _lastTrack = null;
+  let _pusherConnected = false;
+  let _spotifyConnected = false;
+
+  // ── Boot ──────────────────────────────────────────────────────────────────
+
+  function init() {
+    // Run wizard on first visit
+    if (!Wizard.isComplete()) {
+      Wizard.runIfNeeded();
+      return;
+    }
+
+    _loadMode();
+    _renderProfileList();
+    _renderRoomInfo();
+    _renderStatusRow();
+
+    _bindModeToggle();
+    _bindProfileActions();
+    _bindSettingsBtn();
+
+    _startSpotify();
+    _startPusher();
+  }
+
+  // ── Mode ──────────────────────────────────────────────────────────────────
+
+  function _loadMode() {
+    _mode = localStorage.getItem('spotd_mode') || 'milonga';
+    _updateModeUI();
+  }
+
+  function _setMode(m) {
+    _mode = m;
+    localStorage.setItem('spotd_mode', m);
+    _updateModeUI();
+    _pushCurrentState();
+  }
+
+  function _updateModeUI() {
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === _mode);
+    });
+  }
+
+  function _bindModeToggle() {
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => _setMode(btn.dataset.mode));
+    });
+  }
+
+  // ── Spotify ───────────────────────────────────────────────────────────────
+
+  function _startSpotify() {
+    // Check if this is an OAuth callback
+    if (window.location.search.includes('code=')) {
+      Spotify.handleCallback();
+      // Remove code from URL to keep it clean
+      const clean = window.location.pathname;
+      window.history.replaceState({}, '', clean);
+    }
+
+    if (!Spotify.isLoggedIn()) {
+      _setSpotifyStatus('error', 'Not connected');
+      return;
+    }
+
+    _setSpotifyStatus('ok', 'Spotify connected');
+    Spotify.startPolling(_onTrackChange);
+  }
+
+  function _onTrackChange(data) {
+    _lastTrack = data;
+
+    const { isPlaying, track, genres, queueData } = data;
+
+    if (!track) {
+      _setNowPlaying(null, isPlaying);
+      _pushState({ state: 'idle', mode: _mode });
+      return;
+    }
+
+    // Cortina detection (sync from cache — full async detection happens in _pushCurrentState)
+    const isCortina = track.id
+      ? Cortina.detectSync({ trackId: track.id, genres: genres || [] })
+      : false;
+
+    // Tanda tracking
+    if (track.id) Tanda.record(track.id, isCortina);
+    const tandaPos = isCortina ? null : Tanda.getPosition(track.id);
+
+    // Update "now playing" panel
+    _setNowPlaying(track, isPlaying, genres, isCortina, tandaPos);
+
+    // Queue preview for "Coming Up"
+    const next = queueData && queueData[0];
+
+    _pushState({
+      mode: _mode,
+      state: isPlaying ? 'playing' : 'paused',
+      isCortina,
+      artist:    track.artists && track.artists[0] && track.artists[0].name,
+      title:     track.name,
+      genre:     genres && genres[0],
+      year:      track.album && track.album.release_date && track.album.release_date.slice(0, 4),
+      albumArt:  track.album && track.album.images && track.album.images[0] && track.album.images[0].url,
+      tandaPosition: tandaPos && tandaPos.position,
+      tandaTotal:    tandaPos && tandaPos.total,
+      nextArtist: next && next.artists && next.artists[0] && next.artists[0].name,
+      nextGenre:  null, // genre for next track not cached yet — acceptable
+    });
+  }
+
+  async function _pushCurrentState() {
+    if (_lastTrack) _onTrackChange(_lastTrack);
+  }
+
+  // ── Pusher ────────────────────────────────────────────────────────────────
+
+  function _startPusher() {
+    if (!PusherRelay.hasCredentials()) {
+      _setPusherStatus('warn', 'Pusher not configured');
+      return;
+    }
+
+    const { key, cluster } = PusherRelay.getCredentials();
+    const roomCode = PusherRelay.getRoomCode();
+
+    _setPusherStatus('', 'Connecting…');
+
+    // Load Pusher SDK for control-side status monitoring only
+    _loadPusherSdk(key, cluster, () => {
+      // Subscribe purely for connection status feedback
+      PusherRelay.subscribe({
+        roomCode,
+        key,
+        cluster,
+        onMessage: () => {}, // control panel doesn't need to receive its own messages
+        onStatusChange: (state, msg) => {
+          _pusherConnected = (state === 'connected');
+          _setPusherStatus(state === 'connected' ? 'ok' : 'warn', msg || state);
+        },
+      });
+    });
+  }
+
+  function _loadPusherSdk(key, cluster, cb) {
+    if (window.Pusher) { cb(); return; }
+    const script = document.createElement('script');
+    script.src = 'https://js.pusher.com/8.4.0/pusher.min.js';
+    script.onload = cb;
+    document.head.appendChild(script);
+  }
+
+  function _pushState(payload) {
+    if (!PusherRelay.hasCredentials()) return;
+    PusherRelay.send(payload).catch(err => {
+      console.warn('[control] Pusher send failed:', err.message);
+    });
+  }
+
+  // ── Profile management ────────────────────────────────────────────────────
+
+  function _renderProfileList() {
+    const select = document.getElementById('profile-select');
+    if (!select) return;
+
+    const profiles = Profiles.list();
+    const active = Profiles.getActive();
+
+    select.innerHTML = profiles
+      .map(p => `<option value="${_esc(p.id)}" ${p.id === active.id ? 'selected' : ''}>${_esc(p.name)}</option>`)
+      .join('');
+  }
+
+  function _bindProfileActions() {
+    const select = document.getElementById('profile-select');
+    if (!select) return;
+
+    select.addEventListener('change', () => {
+      Profiles.setActive(select.value);
+      _pushCurrentState(); // send updated appearance to display
+    });
+
+    const btnNew = document.getElementById('profile-btn-new');
+    if (btnNew) {
+      btnNew.addEventListener('click', () => {
+        const name = prompt('Profile name:');
+        if (!name) return;
+        const p = Profiles.create(name);
+        Profiles.setActive(p.id);
+        _renderProfileList();
+      });
+    }
+
+    const btnDup = document.getElementById('profile-btn-dup');
+    if (btnDup) {
+      btnDup.addEventListener('click', () => {
+        const active = Profiles.getActive();
+        const p = Profiles.duplicate(active.id);
+        if (p) {
+          Profiles.setActive(p.id);
+          _renderProfileList();
+        }
+      });
+    }
+
+    const btnDel = document.getElementById('profile-btn-del');
+    if (btnDel) {
+      btnDel.addEventListener('click', () => {
+        const active = Profiles.getActive();
+        if (active.id === 'default') { alert('Cannot delete the default profile.'); return; }
+        if (!confirm('Delete profile "' + active.name + '"?')) return;
+        Profiles.remove(active.id);
+        _renderProfileList();
+      });
+    }
+  }
+
+  // ── Room / display URL ────────────────────────────────────────────────────
+
+  function _renderRoomInfo() {
+    const roomCode = PusherRelay.getRoomCode();
+    const displayUrl = PusherRelay.getDisplayUrl();
+
+    const codeEl = document.getElementById('room-code');
+    const urlEl  = document.getElementById('display-url');
+    const linkEl = document.getElementById('display-link');
+    const copyBtn = document.getElementById('copy-url-btn');
+
+    if (codeEl) codeEl.textContent = roomCode;
+    if (urlEl)  urlEl.textContent  = displayUrl;
+    if (linkEl) { linkEl.href = displayUrl; linkEl.textContent = 'Open ↗'; }
+
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(displayUrl).then(() => {
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
+        });
+      });
+    }
+  }
+
+  // ── Now Playing panel ─────────────────────────────────────────────────────
+
+  function _setNowPlaying(track, isPlaying, genres, isCortina, tandaPos) {
+    const artEl    = document.getElementById('np-artwork');
+    const artistEl = document.getElementById('np-artist');
+    const titleEl  = document.getElementById('np-title');
+    const metaEl   = document.getElementById('np-meta');
+    const badgeEl  = document.getElementById('np-badge');
+
+    if (!track) {
+      if (artistEl) artistEl.textContent = isPlaying ? 'Playing…' : 'Nothing playing';
+      if (titleEl)  titleEl.textContent = '';
+      if (metaEl)   metaEl.textContent  = '';
+      if (badgeEl)  { badgeEl.textContent = isPlaying ? '' : 'PAUSED'; badgeEl.className = 'paused'; }
+      if (artEl)    artEl.classList.add('hidden');
+      return;
+    }
+
+    const artist = track.artists && track.artists[0] && track.artists[0].name || '';
+    const title  = track.name || '';
+    const artUrl = track.album && track.album.images && track.album.images[1] && track.album.images[1].url;
+    const year   = track.album && track.album.release_date && track.album.release_date.slice(0, 4) || '';
+    const genre  = genres && genres[0] || '';
+
+    if (artistEl) artistEl.textContent = artist;
+    if (titleEl)  titleEl.textContent  = title;
+
+    const metaParts = [genre, year].filter(Boolean);
+    if (tandaPos) metaParts.push('Track ' + tandaPos.position + ' of ' + tandaPos.total);
+    if (metaEl) metaEl.textContent = metaParts.join(' · ');
+
+    if (artEl) {
+      if (artUrl) { artEl.src = artUrl; artEl.classList.remove('hidden'); }
+      else artEl.classList.add('hidden');
+    }
+
+    if (badgeEl) {
+      if (!isPlaying)   { badgeEl.textContent = 'PAUSED';  badgeEl.className = 'paused';  }
+      else if (isCortina) { badgeEl.textContent = 'CORTINA'; badgeEl.className = 'cortina'; }
+      else              { badgeEl.textContent = 'PLAYING'; badgeEl.className = 'playing'; }
+    }
+  }
+
+  // ── Status indicators ─────────────────────────────────────────────────────
+
+  function _renderStatusRow() {
+    _setSpotifyStatus(Spotify.isLoggedIn() ? 'ok' : 'error',
+      Spotify.isLoggedIn() ? 'Spotify' : 'Spotify disconnected');
+    _setPusherStatus(PusherRelay.hasCredentials() ? '' : 'warn',
+      PusherRelay.hasCredentials() ? 'Pusher…' : 'Pusher not set up');
+  }
+
+  function _setSpotifyStatus(state, label) {
+    _setStatusPill('status-spotify', state, label);
+    _spotifyConnected = (state === 'ok');
+  }
+
+  function _setPusherStatus(state, label) {
+    _setStatusPill('status-pusher', state, label);
+  }
+
+  function _setStatusPill(id, state, label) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = 'status-pill ' + (state || '');
+    el.innerHTML = `<span class="status-dot"></span>${_esc(label)}`;
+  }
+
+  // ── Settings button ───────────────────────────────────────────────────────
+
+  function _bindSettingsBtn() {
+    const btn = document.getElementById('btn-settings');
+    if (!btn) return;
+    btn.addEventListener('click', () => Wizard.show(1));
+  }
+
+  // ── Util ──────────────────────────────────────────────────────────────────
+
+  function _esc(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  return { init };
+})();
+
+window.addEventListener('DOMContentLoaded', Control.init);

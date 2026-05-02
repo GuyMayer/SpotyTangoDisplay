@@ -1,0 +1,222 @@
+/* display.css — Dancer display screen styles */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  font-family: Georgia, serif;
+  background: #1a0a2e;
+  color: #fff;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Background layer ─────────────────────────────────────────── */
+
+#bg-layer {
+  position: fixed; inset: 0;
+  z-index: 0;
+  background: #1a0a2e;
+  transition: background 0.6s ease;
+}
+
+#bg-layer img,
+#bg-layer video {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── Fade overlay for transitions ─────────────────────────────── */
+
+#fade-overlay {
+  position: fixed; inset: 0;
+  z-index: 5;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+#fade-overlay.fading { opacity: 1; }
+
+/* ── Main content container ───────────────────────────────────── */
+
+#content {
+  position: relative;
+  z-index: 10;
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 64px;
+}
+
+/* ── Idle screen ──────────────────────────────────────────────── */
+
+#idle-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  text-align: center;
+}
+
+#idle-logo {
+  max-width: 200px;
+  max-height: 200px;
+  object-fit: contain;
+  opacity: 0.9;
+}
+
+#idle-message {
+  font-size: 28px;
+  color: #cccccc;
+}
+
+#idle-dj-name {
+  font-size: 18px;
+  color: #888;
+}
+
+/* ── Track display ────────────────────────────────────────────── */
+
+#track-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  width: 100%;
+}
+
+#artwork-wrap {
+  margin-bottom: 8px;
+}
+
+#artwork-wrap img {
+  display: block;
+  border-radius: 4px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+}
+
+#track-artist {
+  font-size: 42px;
+  font-weight: bold;
+  line-height: 1.1;
+}
+
+#track-title {
+  font-size: 30px;
+  font-style: italic;
+  line-height: 1.2;
+}
+
+#track-genre {
+  font-size: 22px;
+}
+
+#track-year {
+  font-size: 18px;
+  color: #999;
+}
+
+#tanda-counter {
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: 8px;
+}
+
+/* ── Cortina overlay ──────────────────────────────────────────── */
+
+#cortina-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  text-align: center;
+  width: 100%;
+}
+
+#cortina-label {
+  font-size: 64px;
+  font-weight: bold;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+#cortina-artist { font-size: 22px; color: #aaa; }
+#cortina-title  { font-size: 18px; color: #aaa; }
+
+/* ── "Coming Up" preview block ────────────────────────────────── */
+
+#coming-up {
+  margin-top: 32px;
+  border-top: 1px solid rgba(255,255,255,0.15);
+  padding-top: 20px;
+  text-align: center;
+}
+
+#coming-up-header {
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+#coming-up-artist { font-size: 22px; color: #ccc; }
+#coming-up-genre  { font-size: 18px; }
+
+/* ── Connection status badge ──────────────────────────────────── */
+
+#connection-badge {
+  position: fixed;
+  top: 16px; right: 20px;
+  z-index: 50;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.5);
+  color: #666;
+  transition: color 0.3s, background 0.3s;
+}
+
+#connection-badge.connected    { color: #4caf50; }
+#connection-badge.disconnected { color: #f44336; background: rgba(244,67,54,0.15); }
+#connection-badge.error        { color: #ff9800; }
+
+/* ── Branding overlay ─────────────────────────────────────────── */
+
+#branding {
+  position: fixed;
+  z-index: 20;
+  pointer-events: none;
+}
+
+#branding.top-left     { top: 20px;    left: 24px;  }
+#branding.top-right    { top: 20px;    right: 24px; text-align: right; }
+#branding.bottom-left  { bottom: 20px; left: 24px;  }
+#branding.bottom-right { bottom: 20px; right: 24px; text-align: right; }
+
+#branding-logo {
+  display: block;
+  object-fit: contain;
+}
+
+#branding-name {
+  display: block;
+  margin-top: 4px;
+}
+
+/* ── Utility ──────────────────────────────────────────────────── */
+
+.hidden { display: none !important; }

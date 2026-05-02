@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TangoPassion Display</title>
+  <link rel="stylesheet" href="css/display.css">
+</head>
+<body>
+
+  <!-- Background -->
+  <div id="bg-layer"></div>
+
+  <!-- Fade transition overlay -->
+  <div id="fade-overlay"></div>
+
+  <!-- Connection badge -->
+  <div id="connection-badge">Connecting…</div>
+
+  <!-- Branding (DJ name + logo) -->
+  <div id="branding" class="bottom-right">
+    <img id="branding-logo" src="" alt="" style="display:none">
+    <span id="branding-name"></span>
+  </div>
+
+  <!-- Main content -->
+  <div id="content">
+
+    <!-- Idle -->
+    <div id="idle-screen" class="hidden">
+      <img id="idle-logo" src="" alt="" style="display:none">
+      <div id="idle-message">Welcome</div>
+      <div id="idle-dj-name"></div>
+    </div>
+
+    <!-- Dance track -->
+    <div id="track-screen" class="hidden">
+      <div id="artwork-wrap"><img id="artwork" src="" alt="" width="200" height="200" style="display:none"></div>
+      <div id="track-artist"></div>
+      <div id="track-title"></div>
+      <div id="track-genre"></div>
+      <div id="track-year"></div>
+      <div id="tanda-counter"></div>
+    </div>
+
+    <!-- Cortina -->
+    <div id="cortina-screen" class="hidden">
+      <div id="cortina-label">CORTINA</div>
+      <div id="cortina-artist"></div>
+      <div id="cortina-title"></div>
+      <div id="coming-up" class="hidden">
+        <div id="coming-up-header">Coming Up</div>
+        <div id="coming-up-artist"></div>
+        <div id="coming-up-genre"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/profiles.js"></script>
+  <script src="js/display.js"></script>
+</body>
+</html>

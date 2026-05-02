@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TangoPassion — DJ Control</title>
+  <link rel="stylesheet" href="css/control.css">
+</head>
+<body>
+
+<div id="app">
+
+  <header>
+    <div id="header-brand">TangoPassion</div>
+    <div id="header-actions">
+      <button id="btn-settings" class="btn">⚙ Settings</button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ── Left column ──────────────────────────────────────────────── -->
+    <div>
+
+      <!-- Status row -->
+      <div class="card">
+        <div class="card-title">Connection Status</div>
+        <div id="status-row">
+          <span id="status-spotify" class="status-pill"><span class="status-dot"></span>Spotify</span>
+          <span id="status-pusher"  class="status-pill"><span class="status-dot"></span>Pusher</span>
+        </div>
+      </div>
+
+      <!-- Mode toggle -->
+      <div class="card">
+        <div class="card-title">Mode</div>
+        <div id="mode-toggle">
+          <button class="mode-btn active" data-mode="milonga">Milonga</button>
+          <button class="mode-btn" data-mode="lesson">Lesson</button>
+        </div>
+      </div>
+
+      <!-- Now playing -->
+      <div class="card">
+        <div class="card-title">Now Playing</div>
+        <div id="now-playing">
+          <img id="np-artwork" src="" alt="" class="hidden">
+          <div id="np-text">
+            <div id="np-artist">Nothing playing</div>
+            <div id="np-title"></div>
+            <div id="np-meta"></div>
+          </div>
+          <div id="np-badge" class="paused"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Right column ─────────────────────────────────────────────── -->
+    <div>
+
+      <!-- Display / room -->
+      <div class="card">
+        <div class="card-title">Dancer Display</div>
+        <div id="room-row">
+          <span style="font-size:12px;color:var(--text-muted)">Room&nbsp;</span>
+          <span id="room-code">——</span>
+        </div>
+        <div id="display-url-row">
+          <span id="display-url"></span>
+          <button id="copy-url-btn" class="btn small">Copy</button>
+          <a id="display-link" href="#" target="_blank" rel="noopener" class="btn small">Open ↗</a>
+        </div>
+      </div>
+
+      <!-- Profile switcher -->
+      <div class="card">
+        <div class="card-title">Appearance Profile</div>
+        <select id="profile-select"></select>
+        <div id="profile-actions">
+          <button id="profile-btn-new" class="btn">+ New</button>
+          <button id="profile-btn-dup" class="btn">Duplicate</button>
+          <button id="profile-btn-del" class="btn danger">Delete</button>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+</div>
+
+<!-- Scripts (load order matters) -->
+<script src="js/config.js"></script>
+<script src="js/spotify.js"></script>
+<script src="js/cortina.js"></script>
+<script src="js/tanda.js"></script>
+<script src="js/pusher.js"></script>
+<script src="js/profiles.js"></script>
+<script src="js/wizard.js"></script>
+<script src="js/control.js"></script>
+
+</body>
+</html>
