@@ -208,9 +208,16 @@ const PusherRelay = (() => {
     unsubscribe();
 
     _pusher = new Pusher(k, { cluster: cl });
-    _pusher.connection.bind('connected',    () => _notifyStatus('connected',    'Live'));
-    _pusher.connection.bind('disconnected', () => _notifyStatus('disconnected', 'Connection lost'));
-    _pusher.connection.bind('error',        () => _notifyStatus('error',        'Connection error'));
+    const _thisInstance = _pusher;
+    _pusher.connection.bind('state_change', ({ current }) => {
+      // Ignore events from a stale instance (unsubscribe() was called before this fires)
+      if (_thisInstance !== _pusher) return;
+      if (current === 'connected')                   _notifyStatus('connected',    'Live');
+      else if (current === 'disconnected')           _notifyStatus('disconnected', 'Connection lost');
+      else if (current === 'failed')                 _notifyStatus('error',        'Connection failed');
+      else if (current === 'unavailable')            _notifyStatus('error',        'Unavailable');
+      else if (current === 'connecting')             _notifyStatus('',             'Connecting…');
+    });
 
     _channel = _pusher.subscribe(CONFIG.pusher.channelPrefix + rc);
     if (_onMessage) _channel.bind(CONFIG.pusher.event, _onMessage);
