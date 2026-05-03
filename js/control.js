@@ -46,6 +46,7 @@ const Control = (() => {
   function _loadSource() {
     _source = localStorage.getItem('spotd_source') || 'spotify';
     _updateSourceUI();
+    _loadLiveSettings();
   }
 
   function _setSource(s) {
@@ -56,30 +57,45 @@ const Control = (() => {
     _pushState({ type: 'source-change', source: s });
   }
 
-  function _updateSourceUI() {
-    document.querySelectorAll('.source-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.source === _source);
-    });
-    const statusEl = document.getElementById('audd-status');
-    const hintEl   = document.getElementById('audd-hint');
-    if (!statusEl) return;
-
-    if (_source === 'live') {
-      const hasKey = !!(localStorage.getItem('spotd_audd_key'));
-      statusEl.textContent = hasKey ? '✓ Live mode active' : '⚠️ No AudD key — set it in Settings';
-      statusEl.style.color = hasKey ? 'var(--accent)' : '#ff9800';
-      if (hintEl) hintEl.style.display = hasKey ? 'none' : 'block';
-    } else {
-      statusEl.textContent = '';
-      if (hintEl) hintEl.style.display = 'none';
-    }
+  function _loadLiveSettings() {
+    const sizeEl  = document.getElementById('live-tanda-size');
+    const styleEl = document.getElementById('live-tanda-style');
+    if (sizeEl)  sizeEl.value  = localStorage.getItem('spotd_live_tanda_size')  || '4';
+    if (styleEl) styleEl.value = localStorage.getItem('spotd_live_tanda_style') || 'TTMTTV';
   }
 
   function _bindSourceToggle() {
     document.querySelectorAll('.source-btn').forEach(btn => {
       btn.addEventListener('click', () => _setSource(btn.dataset.source));
     });
+    const sizeEl  = document.getElementById('live-tanda-size');
+    const styleEl = document.getElementById('live-tanda-style');
+    if (sizeEl)  sizeEl.addEventListener('change',  () => localStorage.setItem('spotd_live_tanda_size',  sizeEl.value));
+    if (styleEl) styleEl.addEventListener('change', () => localStorage.setItem('spotd_live_tanda_style', styleEl.value));
   }
+
+  function _updateSourceUI() {
+    document.querySelectorAll('.source-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.source === _source);
+    });
+    const statusEl   = document.getElementById('audd-status');
+    const hintEl     = document.getElementById('audd-hint');
+    const settingsEl = document.getElementById('live-settings');
+    if (!statusEl) return;
+
+    if (_source === 'live') {
+      const hasKey = !!(localStorage.getItem('spotd_audd_key'));
+      statusEl.textContent = hasKey ? '✓ Live mode active' : '⚠️ No AudD key — set it in Settings';
+      statusEl.style.color = hasKey ? 'var(--accent)' : '#ff9800';
+      if (hintEl)     hintEl.style.display = hasKey ? 'none' : 'block';
+      if (settingsEl) settingsEl.classList.add('visible');
+    } else {
+      statusEl.textContent = '';
+      if (hintEl)     hintEl.style.display = 'none';
+      if (settingsEl) settingsEl.classList.remove('visible');
+    }
+  }
+
   // ── Mode ──────────────────────────────────────────────────────────────────
 
   function _loadMode() {

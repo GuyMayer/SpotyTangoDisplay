@@ -52,6 +52,24 @@
         <p id="audd-hint" style="font-size:11px;color:var(--text-muted);margin-top:8px;display:none">
           AudD API key not configured — set it in Settings.
         </p>
+        <div id="live-settings">
+          <div class="live-setting-row">
+            <label for="live-tanda-size">Tracks per tanda</label>
+            <select id="live-tanda-size">
+              <option value="3">3 tracks</option>
+              <option value="4" selected>4 tracks</option>
+            </select>
+          </div>
+          <div class="live-setting-row">
+            <label for="live-tanda-style">Rotation</label>
+            <select id="live-tanda-style">
+              <option value="TTMTTV" selected>T T M T T V</option>
+              <option value="TTM">T T M</option>
+              <option value="TTV">T T V</option>
+              <option value="TTTT">T T T T</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <!-- Milonga format -->

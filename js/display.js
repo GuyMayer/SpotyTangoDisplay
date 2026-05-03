@@ -65,6 +65,11 @@ const Display = (() => {
   let _liveTimer  = null;      // setInterval handle
   const LIVE_INTERVAL_MS = 30000;
 
+  // Live tanda tracking
+  let _liveTandaGenre = null;  // genre of current tanda ('Tango'|'Milonga'|'Vals')
+  let _liveTandaPos   = 0;     // tracks identified in current tanda
+  let _liveTandaRotIdx = -1;   // position in rotation array
+
   // ── Boot ──────────────────────────────────────────────────────────────────
 
   function init() {
@@ -274,7 +279,8 @@ const Display = (() => {
     }
 
     // Next track / next tanda preview on track screen
-    if (data.nextArtist) {
+    // show next section if nextGenre or nextArtist present
+    if (data.nextArtist || data.nextGenre) {
       els.trackNextHeader.textContent = data.nextLabel || 'Next';
       const detail = data.nextGenre
         ? data.nextGenre + (data.nextArtist ? ' · ' + data.nextArtist : '')
@@ -564,6 +570,43 @@ const Display = (() => {
     _setLiveIndicator('off');
   }
 
+  // ── Live tanda tracking ────────────────────────────────────────────────────
+
+  const _GENRE_MAP = { T: 'Tango', M: 'Milonga', V: 'Vals' };
+
+  function _getRotation() {
+    const style = localStorage.getItem('spotd_live_tanda_style') || 'TTMTTV';
+    return style.split('').map(c => _GENRE_MAP[c]).filter(Boolean);
+  }
+
+  // Called on each successful AudD identification. Returns predicted next-tanda genre.
+  function _updateLiveTanda(genre) {
+    if (!genre) return null;
+    const size = parseInt(localStorage.getItem('spotd_live_tanda_size') || '4', 10);
+    const rot  = _getRotation();
+    if (!rot.length) return null;
+
+    if (genre === _liveTandaGenre) {
+      // Same tanda still playing
+      _liveTandaPos = Math.min(_liveTandaPos + 1, size);
+    } else {
+      // New tanda detected
+      _liveTandaPos   = 1;
+      _liveTandaGenre = genre;
+      // Advance rotation index to next matching slot
+      const len = rot.length;
+      for (let i = 1; i <= len; i++) {
+        const candidate = rot[(_liveTandaRotIdx + i) % len];
+        if (candidate === genre) { _liveTandaRotIdx = (_liveTandaRotIdx + i) % len; break; }
+      }
+    }
+
+    // Predict next tanda genre from rotation
+    return rot[(_liveTandaRotIdx + 1) % rot.length] || null;
+  }
+
+  // ── AudD live recognition loop ───────────────────────────────────────────
+
   async function _runAudD() {
     _setLiveIndicator('listening');
     try {
@@ -572,8 +615,13 @@ const Display = (() => {
         // Mic is silent — no music playing, skip silently and stay in listening state
         return;
       } else if (resp.status === 'success' && resp.result) {
-        const r = resp.result;
+        const r    = resp.result;
         const year = r.release_date ? r.release_date.slice(0, 4) : null;
+        // Look up genre from tango DB
+        const db   = TangoDB.lookupSync(r.title || '', r.artist || '', null);
+        const genre = db && db.type ? db.type : null;
+        // Update live tanda tracking and predict next
+        const nextGenre = _updateLiveTanda(genre);
         // Synthesize a track payload and feed it through the normal renderer
         _handleMessage({
           state:    'playing',
@@ -584,6 +632,8 @@ const Display = (() => {
           year,
           albumArt: r.spotify && r.spotify.album && r.spotify.album.images &&
                     r.spotify.album.images[0] && r.spotify.album.images[0].url,
+          nextGenre,
+          nextLabel: nextGenre ? 'Next tanda' : null,
           _fromLive: true,
         });
         _setLiveIndicator('identified');
