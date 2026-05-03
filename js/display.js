@@ -294,7 +294,7 @@ const Display = (() => {
     }
 
     // Next track / next tanda preview — hidden in single-track format
-    const format = data.format || 'tandas-cortinas';
+    format = data.format || format || 'tandas-cortinas';
     if (format !== 'single' && (data.nextArtist || data.nextGenre)) {
       const hdr = (data.nextLabel || 'Next') + (data.nextGenre ? ' · ' + data.nextGenre : '');
       els.trackNextHeader.textContent = hdr;
