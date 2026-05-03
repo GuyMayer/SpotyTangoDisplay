@@ -748,6 +748,13 @@ const Control = (() => {
       }
 
       const data = await resp.json();
+
+      if (!resp.ok) {
+        const msg = (data.error && data.error.message) || ('HTTP ' + resp.status);
+        if (sourceLabel) sourceLabel.textContent = 'API error: ' + msg;
+        return;
+      }
+
       const story = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
       if (story && story.trim()) {
         textarea.value = story.trim();
