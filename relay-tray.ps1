@@ -87,5 +87,38 @@ $timer.Add_Tick({
 })
 $timer.Start()
 
+# Check for updates in background (compare local version.txt vs GitHub)
+$updateJob = Start-Job {
+    try {
+        $local  = (Get-Content "$using:PSScriptRoot\version.txt" -ErrorAction Stop).Trim()
+        $remote = (Invoke-WebRequest -Uri "https://raw.githubusercontent.com/GuyMayer/SpotyTangoDisplay/main/version.txt" -UseBasicParsing -TimeoutSec 10).Content.Trim()
+        if ($remote -ne $local) { return $remote } else { return $null }
+    } catch { return $null }
+}
+
+# Poll update job result (check every 5s, give up after 30s)
+$updateTimer          = New-Object System.Windows.Forms.Timer
+$updateTimer.Interval = 5000
+$updateCheckCount     = 0
+$updateTimer.Add_Tick({
+    $updateCheckCount++
+    if ($updateJob.State -eq "Completed") {
+        $updateTimer.Stop()
+        $newVer = Receive-Job $updateJob
+        Remove-Job $updateJob
+        if ($newVer) {
+            $tray.BalloonTipTitle   = "SpotyTangoDisplay Update"
+            $tray.BalloonTipText    = "Version $newVer available - click to install"
+            $tray.BalloonTipIcon    = [System.Windows.Forms.ToolTipIcon]::Info
+            $tray.ShowBalloonTip(8000)
+            $tray.Add_BalloonTipClicked({ Start-Process "https://guymayer.github.io/SpotyTangoDisplay/download.html" })
+        }
+    } elseif ($updateCheckCount -ge 6) {
+        $updateTimer.Stop()
+        Remove-Job $updateJob -Force
+    }
+})
+$updateTimer.Start()
+
 # Run message loop
 [System.Windows.Forms.Application]::Run()
