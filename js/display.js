@@ -292,11 +292,9 @@ const Display = (() => {
     // Next track / next tanda preview on track screen
     // show next section if nextGenre or nextArtist present
     if (data.nextArtist || data.nextGenre) {
-      els.trackNextHeader.textContent = data.nextLabel || 'Next';
-      const detail = data.nextGenre
-        ? data.nextGenre + (data.nextArtist ? ' · ' + data.nextArtist : '')
-        : data.nextArtist;
-      els.trackNextDetail.textContent = detail;
+      const hdr = (data.nextLabel || 'Next') + (data.nextGenre ? ' · ' + data.nextGenre : '');
+      els.trackNextHeader.textContent = hdr;
+      els.trackNextDetail.textContent = data.nextArtist || '';
       els.trackNext.classList.remove('hidden');
     } else {
       els.trackNext.classList.add('hidden');
