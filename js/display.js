@@ -127,9 +127,13 @@ const Display = (() => {
   function _connectPusher() {
     const params = new URLSearchParams(window.location.search);
 
-    // Local relay mode: ?host=ip:port
+    // Local relay mode: ?host=ip:port  OR  served directly from relay.js (no Pusher key)
     const host = params.get('host');
+    const noKey = !PusherRelay.getCredentials().key;
     if (host) { _connectLocal(decodeURIComponent(host)); return; }
+    if (noKey && PusherRelay.getRelayMode() === 'local') {
+      _connectLocal(window.location.host); return;
+    }
 
     const roomCode = params.get('room');
 

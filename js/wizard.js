@@ -291,14 +291,13 @@ const Wizard = (() => {
       <div id="wiz-relay-local-form" style="display:${mode === 'local' ? 'block' : 'none'}">
         <p>Run this on the DJ laptop <em>before</em> each event:</p>
         <pre class="wiz-code">node relay.js</pre>
-        <p class="wiz-hint">The console will print your LAN IP. Enter it below.</p>
-        <label class="wiz-label">Relay address (IP:port)
-          <input id="wiz-local-host" class="wiz-input" type="text"
-            placeholder="192.168.1.x:3456  or  localhost:3456"
-            value="${_esc(localHost)}">
-        </label>
-        <div id="wiz-local-status" class="wiz-status"></div>
-        <button id="wiz-local-test" class="wiz-btn secondary">Test Connection</button>
+        <p>The console will print the exact URLs. Then:</p>
+        <ol class="wiz-steps-list">
+          <li>Open the DJ app on this laptop from the URL it prints (e.g. <code>http://localhost:3456/</code>)</li>
+          <li>Open the display screen on the dancer TV from the LAN IP it prints</li>
+          <li>In your Spotify app dashboard, add <code>http://localhost:3456/</code> as a redirect URI</li>
+        </ol>
+        <p class="wiz-hint">If you're already running from the relay server, you can skip this step — it's already configured.</p>
       </div>
 
       <div id="wiz-relay-cloud-form" style="display:${mode !== 'local' ? 'block' : 'none'}">
@@ -345,21 +344,7 @@ const Wizard = (() => {
       document.getElementById('wiz-relay-local-form').style.display = 'none';
     });
 
-    // Local test
-    document.getElementById('wiz-local-test').addEventListener('click', async () => {
-      const hostVal = document.getElementById('wiz-local-host').value.trim();
-      const statusEl = document.getElementById('wiz-local-status');
-      if (!hostVal) { statusEl.textContent = '✗ Enter an address first'; statusEl.className = 'wiz-status error'; return; }
-      statusEl.textContent = 'Pinging…'; statusEl.className = 'wiz-status';
-      const result = await PusherRelay.testLocal(hostVal);
-      if (result.ok) {
-        statusEl.textContent = '✓ relay.js is running';
-        statusEl.className = 'wiz-status ok';
-      } else {
-        statusEl.textContent = '✗ Could not reach relay — is relay.js running? (' + result.error + ')';
-        statusEl.className = 'wiz-status error';
-      }
-    });
+    // Local test — no test button in new flow (relay serves from same origin)
 
     // Cloud paste + test
     document.getElementById('wiz-pusher-paste').addEventListener('input', (e) => {
@@ -903,11 +888,7 @@ const Wizard = (() => {
   function _validatePusher() {
     const isLocal = document.getElementById('wiz-relay-local') &&
                     document.getElementById('wiz-relay-local').classList.contains('active');
-    if (isLocal) {
-      const host = (document.getElementById('wiz-local-host') || {}).value || '';
-      if (!host.trim()) { _showError('wiz-local-status', 'Enter the relay address'); return false; }
-      return true;
-    }
+    if (isLocal) return true;  // no fields to validate — host comes from window.location
     const creds = _readPusherFields();
     return creds !== null;
   }
@@ -970,8 +951,8 @@ const Wizard = (() => {
                     document.getElementById('wiz-relay-local').classList.contains('active');
     if (isLocal) {
       PusherRelay.setRelayMode('local');
-      const host = ((document.getElementById('wiz-local-host') || {}).value || '').trim();
-      if (host) PusherRelay.saveLocalHost(host);
+      // Host is always the current page origin when served from relay.js
+      PusherRelay.saveLocalHost(window.location.host);
     } else {
       PusherRelay.setRelayMode('cloud');
       const creds = _readPusherFields();

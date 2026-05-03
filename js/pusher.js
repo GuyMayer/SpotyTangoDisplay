@@ -161,10 +161,10 @@ const PusherRelay = (() => {
 
   async function send(payload) {
     if (getRelayMode() === 'local') {
-      const host = getLocalHost();
-      if (!host) { console.warn('PusherRelay: local host not configured'); return false; }
+      // When served from relay.js, push to same origin
+      const host = getLocalHost() || window.location.host;
       try {
-        const res = await fetch('http://' + host + '/push', {
+        const res = await fetch(window.location.protocol + '//' + host + '/push', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
