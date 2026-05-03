@@ -54,7 +54,14 @@ const LastFm = (() => {
   }
 
   function _stripHtml(html) {
-    return html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    // Preserve paragraph breaks, then collapse inline whitespace
+    return html
+      .replace(/<\/p>/gi, '\n\n')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/[ \t]+/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
   }
 
   function _cleanLastFm(text) {
