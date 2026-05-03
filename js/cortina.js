@@ -19,7 +19,14 @@ const Cortina = (() => {
 
   function getDanceGenres() {
     const stored = localStorage.getItem(STORAGE_DENYLIST);
-    return stored ? JSON.parse(stored) : DEFAULT_DANCE_GENRES;
+    if (!stored) return DEFAULT_DANCE_GENRES;
+    try {
+      const parsed = JSON.parse(stored);
+      // Normalise entries: accept {genre,label} objects or plain strings
+      return parsed
+        .map(e => typeof e === 'string' ? { genre: e, label: e } : e)
+        .filter(e => e && typeof e.genre === 'string' && e.genre.trim());
+    } catch { return DEFAULT_DANCE_GENRES; }
   }
 
   function setDanceGenres(list) {
