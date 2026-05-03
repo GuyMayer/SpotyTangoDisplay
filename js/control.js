@@ -665,6 +665,13 @@ const Control = (() => {
           textarea.value = '';
           textarea.placeholder = 'No story found. Type one to save it.';
           if (sourceLabel) sourceLabel.textContent = '';
+          // Auto-generate if toggle is on and key is set
+          const autogenOn = localStorage.getItem('spotd_autogen_stories') === '1';
+          const hasKey = !!localStorage.getItem('spotd_openrouter_key');
+          if (autogenOn && hasKey) {
+            const aiBtn = document.getElementById('story-ai-btn');
+            if (aiBtn) _generateAiStory(textarea, aiBtn);
+          }
         }
       });
     }
@@ -686,7 +693,21 @@ const Control = (() => {
       const sourceLabel = document.getElementById('story-source-label');
       if (sourceLabel) sourceLabel.textContent = story ? 'Custom (saved by you)' : '';
       if (!story) textarea.placeholder = 'No story saved.';
+      // Visual confirmation flash
+      const prev = saveBtn.textContent;
+      saveBtn.textContent = 'Saved ✓';
+      saveBtn.disabled = true;
+      setTimeout(() => { saveBtn.textContent = prev; saveBtn.disabled = false; }, 1500);
     });
+
+    // Autogenerate toggle — persist state
+    const autogenToggle = document.getElementById('story-autogen-toggle');
+    if (autogenToggle) {
+      autogenToggle.checked = localStorage.getItem('spotd_autogen_stories') === '1';
+      autogenToggle.addEventListener('change', () => {
+        localStorage.setItem('spotd_autogen_stories', autogenToggle.checked ? '1' : '0');
+      });
+    }
 
     if (clearBtn) {
       clearBtn.addEventListener('click', () => {

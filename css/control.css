@@ -437,6 +437,18 @@ main {
 #story-ai-btn:hover { background: rgba(198,160,100,0.12); }
 #story-ai-btn:disabled { opacity: .45; cursor: default; }
 
+#story-autogen-label {
+  float: right;
+  font-size: 0.78em;
+  font-weight: 400;
+  opacity: 0.7;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+#story-autogen-label input { cursor: pointer; accent-color: var(--accent); }
+
 #story-source-label {
   font-size: .75em;
   opacity: .55;

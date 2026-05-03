@@ -135,7 +135,11 @@
 
       <!-- Song Story -->
       <div class="card" id="story-card">
-        <div class="card-title">Song Story <span id="story-card-track"></span></div>
+        <div class="card-title">Song Story <span id="story-card-track"></span>
+          <label id="story-autogen-label" title="Auto-generate a story with AI when none is found">
+            <input type="checkbox" id="story-autogen-toggle"> Auto-generate
+          </label>
+        </div>
         <div id="story-source-label"></div>
         <textarea id="story-edit-input" rows="5" placeholder="No song playing."></textarea>
         <div id="story-edit-actions">
