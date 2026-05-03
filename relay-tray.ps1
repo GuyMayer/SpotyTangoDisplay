@@ -55,12 +55,21 @@ $debugItem.Text = "Debug Info"
 $debugItem.Add_Click({
     $pid_  = if ($relay -and -not $relay.HasExited) { $relay.Id } else { "stopped" }
     $portOk = $false
+    $httpStatus = "n/a"
     try {
         $t = New-Object System.Net.Sockets.TcpClient; $t.Connect("127.0.0.1", 3456); $t.Close(); $portOk = $true
     } catch {}
+    if ($portOk) {
+        try {
+            $r = Invoke-WebRequest -Uri "http://localhost:3456/" -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
+            $httpStatus = "$($r.StatusCode) ($($r.StatusDescription)) - $($r.RawContent.Length) bytes"
+        } catch {
+            $httpStatus = "ERROR: $($_.Exception.Message)"
+        }
+    }
     $ver   = try { (Get-Content "$PSScriptRoot\version.txt" -ErrorAction Stop).Trim() } catch { "unknown" }
     $nodeV = try { (& node --version 2>$null).Trim() } catch { "not found" }
-    $msg   = "relay.js PID : $pid_`nPort 3456   : $(if ($portOk) { 'open' } else { 'closed' })`nVersion     : $ver`nNode        : $nodeV`nScriptRoot  : $PSScriptRoot"
+    $msg   = "relay.js PID : $pid_`nPort 3456   : $(if ($portOk) { 'open' } else { 'closed' })`nHTTP GET /  : $httpStatus`nVersion     : $ver`nNode        : $nodeV`nScriptRoot  : $PSScriptRoot"
     [System.Windows.Forms.MessageBox]::Show($msg, "SpotyTangoDisplay Debug", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information) | Out-Null
 })
 
@@ -89,16 +98,16 @@ $tray.Add_DoubleClick({ Start-Process "http://localhost:3456/" })
 # Balloon tip on startup
 $tray.ShowBalloonTip(3000, "SpotyTangoDisplay", "Relay running - double-click to open.", [System.Windows.Forms.ToolTipIcon]::Info)
 
-# Open browser once relay is actually accepting connections (poll port 3456)
+# Open browser once relay responds to HTTP (not just TCP open)
 $timer          = New-Object System.Windows.Forms.Timer
 $timer.Interval = 500
 $timer.Add_Tick({
     try {
-        $tcp = New-Object System.Net.Sockets.TcpClient
-        $tcp.Connect("127.0.0.1", 3456)
-        $tcp.Close()
-        $timer.Stop()
-        Start-Process "http://localhost:3456/"
+        $r = Invoke-WebRequest -Uri "http://localhost:3456/" -UseBasicParsing -TimeoutSec 1 -ErrorAction Stop
+        if ($r.StatusCode -eq 200) {
+            $timer.Stop()
+            Start-Process "http://localhost:3456/"
+        }
     } catch {
         # not ready yet - try again next tick
     }
