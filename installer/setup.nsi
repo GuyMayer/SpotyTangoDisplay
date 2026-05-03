@@ -19,6 +19,8 @@ OutFile       "${ROOT}\SpotyTangoDisplay-Setup.exe"
 InstallDir    "${INSTALL_DIR}"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
+ShowInstDetails show
+AutoCloseWindow true
 
 ; ── Pages ──────────────────────────────────────────────────────────────────
 Page instfiles
