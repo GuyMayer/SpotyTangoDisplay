@@ -1,22 +1,14 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-# Singleton guard - only one instance allowed
-$mutexName = "Global\SpotyTangoDisplayRelay"
-$mutex = New-Object System.Threading.Mutex($false, $mutexName)
-if (-not $mutex.WaitOne(0)) {
-    [System.Windows.Forms.MessageBox]::Show(
-        "SpotyTangoDisplay is already running.`nCheck the system tray.",
-        "Already Running",
-        [System.Windows.Forms.MessageBoxButtons]::OK,
-        [System.Windows.Forms.MessageBoxIcon]::Information
-    ) | Out-Null
-    exit
-}
+# Kill any previous tray instance (other powershell running relay-tray.ps1, not us)
+try {
+    Get-WmiObject Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -like '*relay-tray.ps1*' -and $_.ProcessId -ne $PID } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+} catch {}
 
-Set-Location $PSScriptRoot
-
-# Kill any existing relay — by port ownership and by matching node+relay.js command line
+# Kill any existing relay.js processes
 try {
     $owned = Get-NetTCPConnection -LocalPort 3456 -ErrorAction SilentlyContinue
     if ($owned) { Stop-Process -Id $owned.OwningProcess -Force -ErrorAction SilentlyContinue }
@@ -27,6 +19,13 @@ try {
         ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 } catch {}
 Start-Sleep -Milliseconds 600
+
+# Singleton guard (acquire after killing old instance)
+$mutexName = "Global\SpotyTangoDisplayRelay"
+$mutex = New-Object System.Threading.Mutex($false, $mutexName)
+$mutex.WaitOne(2000) | Out-Null
+
+Set-Location $PSScriptRoot
 
 # Log file for relay stdout/stderr
 $relayLog = "$env:TEMP\SpotyTangoDisplay-relay.log"
