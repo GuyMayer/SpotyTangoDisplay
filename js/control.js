@@ -772,7 +772,7 @@ const Control = (() => {
           max_tokens: 20,
           messages: [{
             role: 'user',
-            content: 'Translate this Spanish tango title to English. Reply with the English translation only, no quotes, no explanation: ' + title,
+            content: 'Translate this Argentine tango title to English. It may contain lunfardo slang or Rioplatense Spanish. Reply with the English translation only, no quotes, no explanation: ' + title,
           }],
         }),
       });
