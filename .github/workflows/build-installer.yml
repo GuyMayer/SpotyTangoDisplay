@@ -20,8 +20,10 @@ jobs:
         run: choco install nsis --no-progress -y
 
       - name: Build installer
-        run: makensis /DROOT="${{ github.workspace }}" installer\setup.nsi
-        shell: cmd
+        run: |
+          $env:PATH += ";C:\Program Files (x86)\NSIS"
+          makensis /DROOT="${{ github.workspace }}" installer\setup.nsi
+        shell: pwsh
 
       - name: Delete existing release (if any)
         run: |
