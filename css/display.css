@@ -89,10 +89,21 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 0;
   text-align: center;
   width: 100%;
+  height: 100%;
   position: relative;
+}
+
+#track-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
 }
 
 #artwork-wrap {
@@ -176,23 +187,12 @@ html, body {
 #coming-up-artist { font-size: 22px; color: #ccc; }
 #coming-up-genre  { font-size: 18px; }
 
-/* ── Track main wrapper (center col in lesson mode) ──────────── */
-
-#track-main {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  text-align: center;
-}
-
 /* ── Track-screen next preview ───────────────────────────────── */
 #track-next {
-  position: absolute;
-  bottom: 28px;
-  left: 0; right: 0;
+  width: 100%;
   text-align: center;
-  padding: 0 24px;
+  padding: 16px 24px 24px;
+  flex-shrink: 0;
 }
 
 #track-next-header {
@@ -228,7 +228,7 @@ html, body {
 #track-screen.lesson-mode #lesson-left  { grid-area: left; }
 #track-screen.lesson-mode #track-main   { grid-area: center; }
 #track-screen.lesson-mode #lesson-right { grid-area: right; }
-#track-screen.lesson-mode #track-next   { grid-area: next; position: static; bottom: auto; }
+#track-screen.lesson-mode #track-next   { grid-area: next; padding: 16px 24px; }
 
 #track-screen.lesson-mode .lesson-panel {
   display: flex;
