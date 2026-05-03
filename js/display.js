@@ -545,6 +545,13 @@ const Display = (() => {
     if (field.italic != null) el.style.fontStyle  = field.italic ? 'italic' : 'normal';
   }
 
+  function _fitTextToPanel(el, panel, maxSize, minSize) {
+    el.style.fontSize = maxSize + 'px';
+    while (panel.scrollHeight > panel.clientHeight && parseFloat(el.style.fontSize) > minSize) {
+      el.style.fontSize = (parseFloat(el.style.fontSize) - 1) + 'px';
+    }
+  }
+
   function _populateLessonPanels(data) {
     // Orchestra bio (left panel)
     const orch = data.orchestraBio || {};
@@ -562,31 +569,41 @@ const Display = (() => {
     els.lessonOrchSingers.textContent = singers && singers.length
       ? 'Singers: ' + singers.join(', ') : '';
 
+    const rightPanel = document.getElementById('lesson-right');
+
+    function _applyStory(text) {
+      els.lessonStory.textContent = text || '';
+      if (rightPanel && text) requestAnimationFrame(() => _fitTextToPanel(els.lessonStory, rightPanel, 16, 9));
+    }
+
     // Song story (right panel) — use pushed story if available, else async fallback
-    els.lessonStory.textContent  = data.songStory || (data.title ? 'Loading…' : '');
-    els.lessonThemes.textContent = '';
     if (data.songStory) {
-      // Story was pushed from control panel (includes DJ overrides + AI-generated)
-      els.lessonStory.textContent = data.songStory;
+      _applyStory(data.songStory);
+      els.lessonThemes.textContent = '';
     } else if (data.title) {
+      els.lessonStory.textContent = 'Loading…';
+      els.lessonThemes.textContent = '';
       const trackKey = (data.title + '|' + (data.artist || '')).toLowerCase();
       _lessonTrackKey = trackKey;
       if (typeof LastFm !== 'undefined') {
         LastFm.fetchTrackInfo(data.title, data.artist).then(info => {
           if (_lessonTrackKey !== trackKey) return; // stale
           if (info && info.story) {
-            els.lessonStory.textContent = info.story;
+            _applyStory(info.story);
             els.lessonThemes.textContent = info.source === 'wikipedia' ? 'Source: Wikipedia' : 'Source: Last.fm';
           } else {
-            els.lessonStory.textContent = '';
+            _applyStory('');
             els.lessonThemes.textContent = '';
           }
-        }).catch(() => { if (_lessonTrackKey === trackKey) els.lessonStory.textContent = ''; });
+        }).catch(() => { if (_lessonTrackKey === trackKey) _applyStory(''); });
       } else {
-        els.lessonStory.textContent  = data.songStory  || '';
+        _applyStory(data.songStory || '');
         const themes = data.songThemes;
         els.lessonThemes.textContent = themes && themes.length ? 'Themes: ' + themes.join(', ') : '';
       }
+    } else {
+      _applyStory('');
+      els.lessonThemes.textContent = '';
     }
   }
 
