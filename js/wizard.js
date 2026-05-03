@@ -488,9 +488,9 @@ const Wizard = (() => {
           },
           body: JSON.stringify({
             models: [
-            'google/gemma-3-27b-it:free',
-            'meta-llama/llama-3.3-70b-instruct:free',
             'nousresearch/hermes-3-llama-3.1-405b:free',
+            'openai/gpt-oss-20b:free',
+            'qwen/qwen3-coder:free',
           ],
             route: 'fallback',
             max_tokens: 10,
