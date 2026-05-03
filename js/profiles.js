@@ -65,7 +65,7 @@ const Profiles = (() => {
       { id: 'genre',  label: 'Genre',  visible: true, color: '#c8a96e', font: 'Georgia, serif', size: 42, bold: true,  italic: false },
       { id: 'artist', label: 'Artist', visible: true, color: '#ffffff', font: 'Georgia, serif', size: 42, bold: true,  italic: false },
       { id: 'title',  label: 'Title',  visible: true, color: '#dddddd', font: 'Georgia, serif', size: 30, bold: false, italic: true  },
-      { id: 'year',   label: 'Year',   visible: true, color: '#999999', font: 'Georgia, serif', size: 18, bold: false, italic: false },
+      { id: 'year',   label: 'Rec. Year', visible: true, color: '#999999', font: 'Georgia, serif', size: 18, bold: false, italic: false },
       { id: 'artwork', label: 'Artwork', visible: true, size: 200 },
       { id: 'tanda',  label: 'Tanda',  visible: true, color: '#c8a96e', font: 'Georgia, serif', size: 16, bold: false, italic: false },
     ],

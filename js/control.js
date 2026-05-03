@@ -31,6 +31,7 @@ const Control = (() => {
 
     _startSpotify();
     _startPusher();
+    TangoDB.preload();
   }
 
   // ── Mode ──────────────────────────────────────────────────────────────────
@@ -79,7 +80,7 @@ const Control = (() => {
     Spotify.startPolling(_onTrackChange);
   }
 
-  function _onTrackChange(data) {
+  async function _onTrackChange(data) {
     _lastTrack = data;
 
     const { isPlaying, track, genres, queueData } = data;
@@ -99,6 +100,25 @@ const Control = (() => {
     if (track.id) Tanda.record(track.id, isCortina);
     const tandaPos = isCortina ? null : Tanda.getPosition(track.id);
 
+    // DB lookup for dance type + recording year
+    const artistName = track.artists && track.artists[0] && track.artists[0].name;
+    const dbResult = await TangoDB.lookup(track.name, artistName, track.id);
+
+    // Resolve genre: manual override > DB type > Spotify artist genre
+    let genre;
+    if (_danceOverride === 'none') {
+      genre = null;
+    } else if (_danceOverride) {
+      genre = _danceOverride;
+    } else if (dbResult.type) {
+      genre = dbResult.type;
+    } else {
+      genre = genres && genres[0];
+    }
+
+    // Year: DB recording year > Spotify release year
+    const year = dbResult.year || (track.album && track.album.release_date && track.album.release_date.slice(0, 4));
+
     // Update "now playing" panel
     _setNowPlaying(track, isPlaying, genres, isCortina, tandaPos);
 
@@ -109,10 +129,10 @@ const Control = (() => {
       mode: _mode,
       state: isPlaying ? 'playing' : 'paused',
       isCortina: _danceOverride && _danceOverride !== 'none' ? false : isCortina,
-      artist:    track.artists && track.artists[0] && track.artists[0].name,
+      artist:    artistName,
       title:     track.name,
-      genre:     _danceOverride === 'none' ? null : (_danceOverride || (genres && genres[0])),
-      year:      track.album && track.album.release_date && track.album.release_date.slice(0, 4),
+      genre,
+      year,
       albumArt:  track.album && track.album.images && track.album.images[0] && track.album.images[0].url,
       tandaPosition: tandaPos && tandaPos.position,
       tandaTotal:    tandaPos && tandaPos.total,
