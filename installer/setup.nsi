@@ -50,7 +50,7 @@ Section "Main"
     "cmd.exe" \
     '/c "$INSTDIR\start-windows.bat"' \
     "$INSTDIR\favicon.png" 0 \
-    SW_NORMAL "" "Start SpotyTangoDisplay relay and open DJ control panel"
+    SW_SHOWNORMAL "" "Start SpotyTangoDisplay relay and open DJ control panel"
 
   ; Uninstaller
   WriteUninstaller "$INSTDIR\Uninstall.exe"
