@@ -421,17 +421,14 @@ const Wizard = (() => {
         });
         const r = await fetch('https://ws.audioscrobbler.com/2.0/?' + params);
         const d = await r.json();
-        if (d.error) {
-          // Key invalid but API reachable — try Wikipedia
-          const wiki = await fetch('https://en.wikipedia.org/api/rest_v1/page/summary/La_cumparsita');
-          const wd = await wiki.json();
-          if (wd.extract) {
-            statusEl.textContent = '✓ Key invalid but Wikipedia fallback works — songs will still show stories';
-            statusEl.className = 'wiz-status ok';
-          } else {
-            statusEl.textContent = '✗ ' + (d.message || 'Invalid API key');
-            statusEl.className = 'wiz-status error';
-          }
+        if (d.error && (d.error === 4 || d.error === 10 || d.error === 26)) {
+          // Auth errors: 4=Invalid auth, 10=Invalid API key, 26=Suspended
+          statusEl.textContent = '✗ Invalid API key — double-check it above';
+          statusEl.className = 'wiz-status error';
+        } else if (d.error) {
+          // Any other error (e.g. track not found) means key is fine
+          statusEl.textContent = '✓ Last.fm connected — stories ready';
+          statusEl.className = 'wiz-status ok';
         } else if (d.track && d.track.wiki && d.track.wiki.summary) {
           statusEl.textContent = '✓ Last.fm connected — stories ready';
           statusEl.className = 'wiz-status ok';
