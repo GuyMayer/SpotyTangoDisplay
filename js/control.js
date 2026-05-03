@@ -108,10 +108,10 @@ const Control = (() => {
     _pushState({
       mode: _mode,
       state: isPlaying ? 'playing' : 'paused',
-      isCortina: _danceOverride ? false : isCortina,
+      isCortina: _danceOverride && _danceOverride !== 'none' ? false : isCortina,
       artist:    track.artists && track.artists[0] && track.artists[0].name,
       title:     track.name,
-      genre:     _danceOverride || (genres && genres[0]),
+      genre:     _danceOverride === 'none' ? null : (_danceOverride || (genres && genres[0])),
       year:      track.album && track.album.release_date && track.album.release_date.slice(0, 4),
       albumArt:  track.album && track.album.images && track.album.images[0] && track.album.images[0].url,
       tandaPosition: tandaPos && tandaPos.position,
