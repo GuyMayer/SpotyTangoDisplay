@@ -64,6 +64,12 @@ const Display = (() => {
   let _liveSource = false;     // true = AudD mic mode
   let _liveTimer  = null;      // setInterval handle
   const LIVE_INTERVAL_MS = 30000;
+  let _orchestras = {};        // loaded from data/orchestras.json
+
+  function _getOrchestraBio(name) {
+    if (!name) return null;
+    return _orchestras[name.toLowerCase().trim()] || null;
+  }
 
   // Live tanda tracking
   let _liveTandaGenre = null;  // genre of current tanda ('Tango'|'Milonga'|'Vals')
@@ -85,6 +91,11 @@ const Display = (() => {
     _showIdle();
     _connectPusher();
     _checkLiveSource();
+
+    fetch('data/orchestras.json')
+      .then(r => r.json())
+      .then(d => { _orchestras = d; })
+      .catch(() => {});
 
     const videoBtn   = document.getElementById('local-video-btn');
     const videoInput = document.getElementById('local-video-input');
@@ -618,7 +629,7 @@ const Display = (() => {
         const r    = resp.result;
         const year = r.release_date ? r.release_date.slice(0, 4) : null;
         // Look up genre from tango DB
-        const db   = TangoDB.lookupSync(r.title || '', r.artist || '', null);
+        const db    = TangoDB.lookupSync(r.title || '', r.artist || '', null);
         const genre = db && db.type ? db.type : null;
         // Update live tanda tracking and predict next
         const nextGenre = _updateLiveTanda(genre);
@@ -633,7 +644,8 @@ const Display = (() => {
           albumArt: r.spotify && r.spotify.album && r.spotify.album.images &&
                     r.spotify.album.images[0] && r.spotify.album.images[0].url,
           nextGenre,
-          nextLabel: nextGenre ? 'Next tanda' : null,
+          nextLabel:    nextGenre ? 'Next tanda' : null,
+          orchestraBio: _getOrchestraBio(r.artist),
           _fromLive: true,
         });
         _setLiveIndicator('identified');

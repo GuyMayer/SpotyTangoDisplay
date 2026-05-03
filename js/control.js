@@ -10,6 +10,22 @@ const Control = (() => {
   let _pusherConnected = false;
   let _spotifyConnected = false;
   let _danceOverride = '';        // '' | 'Tango' | 'Milonga' | 'Vals' — DJ manual override
+  let _orchestras = {};          // loaded from data/orchestras.json
+
+  // ── Orchestra lookup ──────────────────────────────────────────────────────
+
+  function _loadOrchestras() {
+    fetch('data/orchestras.json')
+      .then(r => r.json())
+      .then(d => { _orchestras = d; })
+      .catch(() => {});
+  }
+
+  function _getOrchestraBio(artistName) {
+    if (!artistName || !_orchestras) return null;
+    const key = artistName.toLowerCase().trim();
+    return _orchestras[key] || null;
+  }
 
   // ── Boot ──────────────────────────────────────────────────────────────────
 
@@ -40,6 +56,7 @@ const Control = (() => {
     _startSpotify();
     _startPusher();
     TangoDB.preload();
+    _loadOrchestras();
   }
   // ── Input source (Spotify / Live AudD) ───────────────────────────────
 
@@ -276,6 +293,7 @@ const Control = (() => {
       nextArtist,
       nextGenre,
       nextLabel,
+      orchestraBio: _getOrchestraBio(artistName),
     });
   }
 

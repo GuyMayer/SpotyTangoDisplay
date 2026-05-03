@@ -1,0 +1,327 @@
+{
+  "juan d'arienzo": {
+    "name": "Juan D'Arienzo",
+    "nickname": "El Rey del Compás",
+    "era": "1935 – 1975",
+    "style": "Rhythmic, driving, staccato",
+    "characteristics": [
+      "Relentlessly marcato beat",
+      "Fast, precise staccato violin lines",
+      "High energy — dancers rarely stop moving",
+      "Minimal rubato; tempo stays locked"
+    ],
+    "notable_singers": ["Alberto Echagüe", "Héctor Mauré", "Armando Laborde"]
+  },
+  "carlos di sarli": {
+    "name": "Carlos Di Sarli",
+    "nickname": "El Señor del Tango",
+    "era": "1939 – 1958",
+    "style": "Elegant, legato, melodic",
+    "characteristics": [
+      "Long, smooth melodic phrases",
+      "Rich piano fills and distinctive intros",
+      "Ideal for walking and long strides",
+      "Space and breath between phrases"
+    ],
+    "notable_singers": ["Roberto Rufino", "Jorge Durán", "Oscar Serpa"]
+  },
+  "osvaldo pugliese": {
+    "name": "Osvaldo Pugliese",
+    "nickname": "El Maestro",
+    "era": "1943 – 1988",
+    "style": "Dramatic, intense, expressive",
+    "characteristics": [
+      "La yumba — deep, syncopated bass pulse",
+      "Dramatic build-ups and sudden silences",
+      "More complex improvisational structure",
+      "Demands musical sensitivity from dancers"
+    ],
+    "notable_singers": ["Roberto Chanel", "Alberto Morán", "Jorge Maciel"]
+  },
+  "aníbal troilo": {
+    "name": "Aníbal Troilo",
+    "nickname": "Pichuco",
+    "era": "1937 – 1974",
+    "style": "Lyrical, romantic, expressive",
+    "characteristics": [
+      "Deeply romantic and melancholic feel",
+      "Fluid bandoneon-led phrasing",
+      "Balance of rhythmic drive and lyrical flow",
+      "Rich, warm orchestral texture"
+    ],
+    "notable_singers": ["Francisco Fiorentino", "Alberto Marino", "Edmundo Rivero"]
+  },
+  "alfredo de angelis": {
+    "name": "Alfredo De Angelis",
+    "nickname": "El Caballero del Tango",
+    "era": "1943 – 1970s",
+    "style": "Lyrical, accessible, popular",
+    "characteristics": [
+      "Clear, accessible melodic lines",
+      "Warm and inviting dance feel",
+      "Prominent duet vocals",
+      "Consistent tempo, easy to follow"
+    ],
+    "notable_singers": ["Carlos Dante", "Julio Martel", "Oscar Larroca"]
+  },
+  "pedro laurenz": {
+    "name": "Pedro Laurenz",
+    "nickname": "El Poeta del Bandonéon",
+    "era": "1937 – 1950s",
+    "style": "Lyrical, nostalgic, intimate",
+    "characteristics": [
+      "Expressive bandoneon solos",
+      "Poetic, introspective phrasing",
+      "Subtle rhythmic variations",
+      "Favoured for slow, close milonga embrace"
+    ],
+    "notable_singers": ["Juan Carlos Casas", "Alberto Del Campo"]
+  },
+  "francisco canaro": {
+    "name": "Francisco Canaro",
+    "nickname": "Pirincho",
+    "era": "1916 – 1964",
+    "style": "Smooth, steady, commercial",
+    "characteristics": [
+      "One of the most prolific recording orchestras",
+      "Steady, comfortable tempo — beginner-friendly",
+      "Clean, simple arrangements",
+      "Wide variety: tango, milonga, vals"
+    ],
+    "notable_singers": ["Ernesto Famá", "Roberto Maida", "Carlos Roldán"]
+  },
+  "miguel caló": {
+    "name": "Miguel Caló",
+    "nickname": "El Orquesta de las Estrellas",
+    "era": "1940 – 1950s",
+    "style": "Sophisticated, melodic, lyrical",
+    "characteristics": [
+      "Refined, elegant arrangements",
+      "Strong vocal focus with outstanding singers",
+      "Smooth melodic phrasing",
+      "Ideal for musical connection"
+    ],
+    "notable_singers": ["Raúl Berón", "Alberto Podestá", "Osmar Maderna"]
+  },
+  "rodolfo biagi": {
+    "name": "Rodolfo Biagi",
+    "nickname": "Manos Brujas",
+    "era": "1938 – 1960s",
+    "style": "Syncopated, playful, rhythmic",
+    "characteristics": [
+      "Strong syncopation and surprising accents",
+      "Playful, almost cheeky rhythmic feel",
+      "Energetic and bouncy — great for milonga-like moments",
+      "Distinctive piano syncopation"
+    ],
+    "notable_singers": ["Jorge Ortiz", "Carlos Acuña", "Hugo Duval"]
+  },
+  "enrique rodríguez": {
+    "name": "Enrique Rodríguez",
+    "nickname": "El Chato",
+    "era": "1937 – 1960s",
+    "style": "Light, festive, popular",
+    "characteristics": [
+      "Upbeat and cheerful character",
+      "Simple, flowing melodies",
+      "Strong milonga and vals repertoire",
+      "Accessible, social dance energy"
+    ],
+    "notable_singers": ["Armando Moreno", "Roberto Flores", "Emilio Pellejero"]
+  },
+  "osvaldo fresedo": {
+    "name": "Osvaldo Fresedo",
+    "nickname": "El Pibe de La Paternal",
+    "era": "1920 – 1960s",
+    "style": "Elegant, refined, orchestral",
+    "characteristics": [
+      "Rich orchestral textures with harp and vibraphone",
+      "Suave, aristocratic feel",
+      "Slower, graceful tempos",
+      "Salon-style elegance"
+    ],
+    "notable_singers": ["Roberto Ray", "Ricardo Ruano"]
+  },
+  "ricardo tanturi": {
+    "name": "Ricardo Tanturi",
+    "nickname": "El Caballero del Tango",
+    "era": "1937 – 1950s",
+    "style": "Rhythmic, earthy, robust",
+    "characteristics": [
+      "Strong rhythmic drive with vocal emphasis",
+      "Earthy, masculine character",
+      "Alberto Castillo period: highly vocal and theatrical",
+      "Enrique Campos period: smoother and lyrical"
+    ],
+    "notable_singers": ["Alberto Castillo", "Enrique Campos"]
+  },
+  "carlos di sarli (instrumental)": {
+    "name": "Carlos Di Sarli",
+    "nickname": "El Señor del Tango",
+    "era": "1939 – 1958",
+    "style": "Elegant, legato, melodic",
+    "characteristics": [
+      "Long, smooth melodic phrases",
+      "Rich piano fills and distinctive intros",
+      "Ideal for walking and long strides",
+      "Space and breath between phrases"
+    ],
+    "notable_singers": []
+  },
+  "carlos gardel": {
+    "name": "Carlos Gardel",
+    "nickname": "El Zorzal Criollo",
+    "era": "1917 – 1935",
+    "style": "Vocal, intimate, foundational",
+    "characteristics": [
+      "The most iconic tango voice in history",
+      "Intimate, personal vocal style",
+      "Early golden age recordings",
+      "Influenced every singer who followed"
+    ],
+    "notable_singers": ["Carlos Gardel"]
+  },
+  "lucio demare": {
+    "name": "Lucio Demare",
+    "nickname": "El Músico de la Elegancia",
+    "era": "1942 – 1950s",
+    "style": "Romantic, lyrical, intimate",
+    "characteristics": [
+      "Deeply romantic orchestrations",
+      "Intimate, chamber-music feel",
+      "Slow, expressive tempos",
+      "Long musical phrases with emotional depth"
+    ],
+    "notable_singers": ["Juan Carlos Miranda", "Raúl Berón"]
+  },
+  "ángel d'agostino": {
+    "name": "Ángel D'Agostino",
+    "nickname": "",
+    "era": "1940 – 1950s",
+    "style": "Smooth, elegant, vocal",
+    "characteristics": [
+      "Famous partnership with Ángel Vargas",
+      "Clean, swinging rhythmic feel",
+      "Accessible and musical",
+      "Great for beginners and experienced dancers alike"
+    ],
+    "notable_singers": ["Ángel Vargas"]
+  },
+  "francisco lomuto": {
+    "name": "Francisco Lomuto",
+    "nickname": "",
+    "era": "1927 – 1943",
+    "style": "Smooth, clear, old-guard",
+    "characteristics": [
+      "Clean, uncomplicated arrangements",
+      "Steady tempo",
+      "Warm and accessible feel",
+      "Important transitional era recordings"
+    ],
+    "notable_singers": ["Jorge Omar", "Fernando Díaz"]
+  },
+  "orquesta típica victor": {
+    "name": "Orquesta Típica Víctor",
+    "nickname": "OTV",
+    "era": "1925 – 1934",
+    "style": "Classic, old-guard, folkloric",
+    "characteristics": [
+      "Studio house orchestra for Victor records",
+      "Preserved early golden age sound",
+      "Foundation recordings for tango dance",
+      "Various conductors and arrangers"
+    ],
+    "notable_singers": ["Adolfo Morales", "Roberto Díaz"]
+  },
+  "edgardo donato": {
+    "name": "Edgardo Donato",
+    "nickname": "El Rey de la Milonga",
+    "era": "1932 – 1944",
+    "style": "Rhythmic, joyful, danceable",
+    "characteristics": [
+      "Exceptional milonga recordings",
+      "Light, bouncy energy",
+      "Festive and social character",
+      "Great rhythmic clarity"
+    ],
+    "notable_singers": ["Horacio Lagos", "Romeo Gavioli", "Lita Morales"]
+  },
+  "florindo sassone": {
+    "name": "Florindo Sassone",
+    "nickname": "",
+    "era": "1945 – 1975",
+    "style": "Lyrical, romantic, polished",
+    "characteristics": [
+      "Rich, lush orchestrations",
+      "Romantic and sentimental character",
+      "Popular in the 1950s and 60s",
+      "Smooth, continuous melodic flow"
+    ],
+    "notable_singers": ["Alberto Godoy", "Héctor de Rosas"]
+  },
+  "héctor varela": {
+    "name": "Héctor Varela",
+    "nickname": "",
+    "era": "1950 – 1970s",
+    "style": "Energetic, popular, accessible",
+    "characteristics": [
+      "Fast, energetic tempos",
+      "Audience-friendly arrangements",
+      "Strong rhythmic character",
+      "Popular at dance halls"
+    ],
+    "notable_singers": ["Rodolfo Lesica", "Argentino Ledesma"]
+  },
+  "donato racciatti": {
+    "name": "Donato Racciatti",
+    "nickname": "",
+    "era": "1950 – 1970s",
+    "style": "Smooth, Uruguayan, rhythmic",
+    "characteristics": [
+      "Uruguayan tango tradition",
+      "Polished, energetic style",
+      "Strong milonga and candombe influence",
+      "Popular across the Río de la Plata"
+    ],
+    "notable_singers": ["Olga Delgado"]
+  },
+  "roberto firpo": {
+    "name": "Roberto Firpo",
+    "nickname": "El Viejo Firpo",
+    "era": "1913 – 1950s",
+    "style": "Old-guard, piano-led, energetic",
+    "characteristics": [
+      "Pioneer of early tango orchestra",
+      "Piano-led, energetic style",
+      "Helped define classic orquesta típica",
+      "Key transitional recordings"
+    ],
+    "notable_singers": ["Carlos Viván"]
+  },
+  "osvaldo zotto": {
+    "name": "Osvaldo Zotto",
+    "nickname": "",
+    "era": "2000s",
+    "style": "Modern, performance-oriented",
+    "characteristics": [
+      "Contemporary tango stage style",
+      "Influenced by golden age masters",
+      "Theatrical and expressive",
+      "Primarily stage/show tango"
+    ],
+    "notable_singers": []
+  },
+  "gotan project": {
+    "name": "Gotan Project",
+    "nickname": "",
+    "era": "2001 – 2013",
+    "style": "Electrotango, ambient, fusion",
+    "characteristics": [
+      "Electronic beats blended with tango strings and bandoneon",
+      "Ambient and lounge influences",
+      "Not used at traditional milongas",
+      "Introduced tango to a new generation"
+    ],
+    "notable_singers": ["Cristina Vilallonga"]
+  }
+}
