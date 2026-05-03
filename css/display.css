@@ -355,6 +355,18 @@ html, body {
 
 /* ── Branding overlay ─────────────────────────────────────────── */
 
+#copyright {
+  position: fixed;
+  bottom: 14px;
+  left: 20px;
+  z-index: 20;
+  pointer-events: none;
+  font-size: 11px;
+  color: rgba(255,255,255,0.28);
+  font-family: Georgia, serif;
+  letter-spacing: 0.02em;
+}
+
 #branding {
   position: fixed;
   z-index: 20;
