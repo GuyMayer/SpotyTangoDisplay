@@ -76,7 +76,7 @@ const Wizard = (() => {
         </div>
         <div id="wizard-about">
           <span>Sidekick SpotyMilonga Display</span>
-          <a href="https://buymeacoffee.com/guymayer" target="_blank" rel="noopener" id="wizard-coffee-btn">☕ Buy me a coffee</a>
+          <a href="https://buymeacoffee.com/studiomailt" target="_blank" rel="noopener" id="wizard-coffee-btn">☕ Buy me a coffee</a>
         </div>
       </div>
     `;
