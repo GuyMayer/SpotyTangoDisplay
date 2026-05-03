@@ -748,7 +748,7 @@ const Control = (() => {
   function _looksSpanish(title) {
     if (/[áéíóúüñ¿¡]/i.test(title)) return true;
     // Also catch plain-ASCII Spanish tango titles via common Spanish words
-    const words = title.toLowerCase().split(/[\s\-]+/);
+    const words = title.toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/);
     const spanishWords = new Set(['el','la','los','las','un','una','de','del','en','y','se','te','me','mi','tu','su','que','con','por','para','al','lo','no','si','mas','ni']);
     return words.some(w => spanishWords.has(w));
   }
