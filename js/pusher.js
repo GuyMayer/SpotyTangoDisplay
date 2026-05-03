@@ -141,7 +141,12 @@ const PusherRelay = (() => {
       }
       return [a, b, c, d];
     }
-    return binl2hex(binlMD5(str2binl(str), str.length * 8));
+    // Convert to UTF-8 bytes so multi-byte characters (accented artist names etc.)
+    // produce the same byte sequence as the actual HTTP body.
+    const utf8Bytes = new TextEncoder().encode(str);
+    let byteStr = '';
+    for (let i = 0; i < utf8Bytes.length; i++) byteStr += String.fromCharCode(utf8Bytes[i]);
+    return binl2hex(binlMD5(str2binl(byteStr), byteStr.length * 8));
   }
 
   // Cloudflare Worker that proxies to Pusher REST API with CORS headers
