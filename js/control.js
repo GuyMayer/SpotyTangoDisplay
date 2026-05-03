@@ -48,6 +48,7 @@ const Control = (() => {
     _bindProfileActions();
     _bindSettingsBtn();
     _bindDjMessage();
+    _bindStoryCard();
     _bindDanceOverride();
     _bindFormat();
     _bindTrackOverride();
@@ -197,12 +198,14 @@ const Control = (() => {
       _setNowPlaying(null, isPlaying);
       _pushState({ state: 'idle', mode: _mode });
       _updateTrackOverrideRow(null);
+      _updateStoryCard(null, null);
       return;
     }
 
     // Update per-track override UI whenever track changes
     if (track.id !== _currentTrackId) {
       _currentTrackId = track.id;
+      _updateStoryCard(track.name, track.artists && track.artists[0] && track.artists[0].name);
     }
 
     // Cortina detection (sync from cache — full async detection happens in _pushCurrentState)
@@ -614,6 +617,86 @@ const Control = (() => {
         console.warn('[control] DJ message clear failed:', err.message);
       });
     });
+  }
+
+  // ── Song Story card ───────────────────────────────────────────────────────
+  let _storyCurrentTitle = '';
+
+  function _updateStoryCard(title, artist) {
+    _storyCurrentTitle = title || '';
+    const trackLabel = document.getElementById('story-card-track');
+    const sourceLabel = document.getElementById('story-source-label');
+    const textarea   = document.getElementById('story-edit-input');
+    if (!textarea) return;
+
+    if (!title) {
+      if (trackLabel) trackLabel.textContent = '';
+      if (sourceLabel) sourceLabel.textContent = '';
+      textarea.value = '';
+      textarea.placeholder = 'No song playing.';
+      return;
+    }
+
+    if (trackLabel) trackLabel.textContent = '— ' + title;
+    textarea.value = '';
+    textarea.placeholder = 'Loading…';
+    if (sourceLabel) sourceLabel.textContent = '';
+
+    // Check for existing override first (instant)
+    if (typeof LastFm !== 'undefined') {
+      const override = LastFm.getStoryOverride(title);
+      if (override) {
+        textarea.value = override;
+        if (sourceLabel) sourceLabel.textContent = 'Custom (saved by you)';
+        return;
+      }
+    }
+
+    // Async fetch from local/Last.fm/Wikipedia
+    const fetchTitle = title;
+    if (typeof LastFm !== 'undefined') {
+      LastFm.fetchTrackInfo(title, artist).then(result => {
+        if (fetchTitle !== _storyCurrentTitle) return; // stale
+        if (result && result.story) {
+          textarea.value = result.story;
+          const srcMap = { local: 'Curated local library', lastfm: 'Last.fm', wikipedia: 'Wikipedia', custom: 'Custom (saved by you)' };
+          if (sourceLabel) sourceLabel.textContent = srcMap[result.source] || result.source;
+        } else {
+          textarea.value = '';
+          textarea.placeholder = 'No story found. Type one to save it.';
+          if (sourceLabel) sourceLabel.textContent = '';
+        }
+      });
+    }
+  }
+
+  function _bindStoryCard() {
+    const saveBtn  = document.getElementById('story-save-btn');
+    const clearBtn = document.getElementById('story-clear-btn');
+    const textarea = document.getElementById('story-edit-input');
+    if (!saveBtn || !textarea) return;
+
+    saveBtn.addEventListener('click', () => {
+      const story = textarea.value.trim();
+      if (!_storyCurrentTitle) return;
+      if (typeof LastFm !== 'undefined') {
+        LastFm.setStoryOverride(_storyCurrentTitle, story || null);
+      }
+      const sourceLabel = document.getElementById('story-source-label');
+      if (sourceLabel) sourceLabel.textContent = story ? 'Custom (saved by you)' : '';
+      if (!story) textarea.placeholder = 'No story saved.';
+    });
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        if (!_storyCurrentTitle) return;
+        if (typeof LastFm !== 'undefined') {
+          LastFm.setStoryOverride(_storyCurrentTitle, null);
+        }
+        // Re-fetch underlying story
+        _updateStoryCard(_storyCurrentTitle, '');
+      });
+    }
   }
 
   // ── Util ──────────────────────────────────────────────────────────────────

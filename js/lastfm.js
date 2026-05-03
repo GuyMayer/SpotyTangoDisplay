@@ -1,15 +1,56 @@
-// lastfm.js — song story lookup: Last.fm primary, Wikipedia fallback
+// lastfm.js — song story lookup: local JSON → Last.fm → Wikipedia
 // No build step; browser globals only.
 
 const LastFm = (() => {
-  const STORAGE_KEY = 'spotd_lastfm_key';
-  const API_URL     = 'https://ws.audioscrobbler.com/2.0/';
-  const _cache      = {};   // keyed by "title|artist" lowercase
+  const STORAGE_KEY    = 'spotd_lastfm_key';
+  const API_URL        = 'https://ws.audioscrobbler.com/2.0/';
+  const _cache         = {};   // keyed by "title|artist" lowercase, runtime session
+  let   _localStories  = null; // loaded once from data/tango-stories.json
 
   function getKey() { return localStorage.getItem(STORAGE_KEY) || ''; }
   function setKey(k) {
     if (k) localStorage.setItem(STORAGE_KEY, k);
     else   localStorage.removeItem(STORAGE_KEY);
+  }
+
+  // ── Local curated stories ────────────────────────────────────────────────
+  async function _loadLocal() {
+    if (_localStories) return _localStories;
+    try {
+      const r = await fetch('data/tango-stories.json');
+      _localStories = r.ok ? await r.json() : {};
+    } catch (_) { _localStories = {}; }
+    return _localStories;
+  }
+
+  function _lookupLocal(db, title) {
+    if (!title) return null;
+    const key = title.toLowerCase().trim();
+    const entry = db[key];
+    if (!entry || !entry.story) return null;
+    return { story: entry.story, source: 'local' };
+  }
+
+  // ── Story override (DJ can edit per-track, stored in localStorage) ───────
+  const _OVERRIDE_KEY = 'spotd_story_overrides';
+  function _getOverrides() {
+    try { return JSON.parse(localStorage.getItem(_OVERRIDE_KEY) || '{}'); } catch { return {}; }
+  }
+  function getStoryOverride(title) {
+    if (!title) return null;
+    const overrides = _getOverrides();
+    return overrides[title.toLowerCase().trim()] || null;
+  }
+  function setStoryOverride(title, story) {
+    if (!title) return;
+    const overrides = _getOverrides();
+    const k = title.toLowerCase().trim();
+    if (story) overrides[k] = story;
+    else delete overrides[k];
+    localStorage.setItem(_OVERRIDE_KEY, JSON.stringify(overrides));
+    // Invalidate cache so next fetch picks up the change
+    const cacheKey = (title + '|').toLowerCase();
+    Object.keys(_cache).forEach(k2 => { if (k2.startsWith(k + '|')) delete _cache[k2]; });
   }
 
   function _stripHtml(html) {
@@ -43,18 +84,35 @@ const LastFm = (() => {
 
   /**
    * Fetch song story for (title, artist).
+   * Priority: DJ override → local JSON → Last.fm → Wikipedia.
    * Returns { story, source, url? } or null.
-   * Results are cached for the lifetime of the page.
+   * Results are cached for the lifetime of the page (overrides bypass cache on write).
    */
   async function fetchTrackInfo(title, artist) {
     if (!title) return null;
     const cacheKey = (title + '|' + (artist || '')).toLowerCase();
     if (_cache[cacheKey] !== undefined) return _cache[cacheKey];
 
+    // ── 1. DJ override ───────────────────────────────────────────────────────
+    const override = getStoryOverride(title);
+    if (override) {
+      const result = { story: override, source: 'custom' };
+      _cache[cacheKey] = result;
+      return result;
+    }
+
+    // ── 2. Local curated JSON ────────────────────────────────────────────────
+    const db = await _loadLocal();
+    const local = _lookupLocal(db, title);
+    if (local) {
+      _cache[cacheKey] = local;
+      return local;
+    }
+
     let result = null;
     const key = getKey();
 
-    // ── Last.fm ──────────────────────────────────────────────────────────────
+    // ── 3. Last.fm ───────────────────────────────────────────────────────────
     if (key) {
       try {
         const params = new URLSearchParams({
@@ -75,12 +133,12 @@ const LastFm = (() => {
       } catch (_) { /* fall through to Wikipedia */ }
     }
 
-    // ── Wikipedia fallback ───────────────────────────────────────────────────
+    // ── 4. Wikipedia fallback ────────────────────────────────────────────────
     if (!result) result = await _tryWikipedia(title);
 
     _cache[cacheKey] = result;
     return result;
   }
 
-  return { getKey, setKey, fetchTrackInfo };
+  return { getKey, setKey, fetchTrackInfo, getStoryOverride, setStoryOverride };
 })();
