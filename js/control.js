@@ -12,6 +12,7 @@ const Control = (() => {
   let _spotifyConnected = false;
   let _danceOverride = '';        // '' | 'Tango' | 'Milonga' | 'Vals' — DJ manual override
   let _orchestras = {};          // loaded from data/orchestras.json
+  const _orchestraBioCache = {};  // AI-generated bios for unknown orchestras
 
   // ── Orchestra lookup ──────────────────────────────────────────────────────
 
@@ -322,6 +323,9 @@ const Control = (() => {
 
     // Async: translate title if it looks Spanish, then push an update
     _maybeTranslateTitle(track.name, payload);
+
+    // Async: fetch AI orchestra bio if not in local DB
+    if (!payload.orchestraBio) _maybeFetchOrchestraBio(artistName, payload);
   }
 
   async function _pushCurrentState() {
@@ -750,6 +754,50 @@ const Control = (() => {
     // Quoted titles (straight or curly quotes) — common in Argentine tango track names
     if (/[""\u201c\u201d'"'']/.test(title)) return true;
     return false;
+  }
+
+  async function _maybeFetchOrchestraBio(artistName, basePayload) {
+    if (!artistName) return;
+    const key = artistName.toLowerCase().trim();
+
+    if (key in _orchestraBioCache) {
+      if (_orchestraBioCache[key]) _pushState(Object.assign({}, basePayload, { orchestraBio: _orchestraBioCache[key] }));
+      return;
+    }
+
+    const apiKey = localStorage.getItem('spotd_openrouter_key');
+    if (!apiKey) return;
+
+    try {
+      const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + apiKey,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://guymayer.github.io/SpotyTangoDisplay/',
+        },
+        body: JSON.stringify({
+          models: ['openai/gpt-oss-20b:free', 'openai/gpt-oss-120b:free', 'meta-llama/llama-3.3-70b-instruct:free'],
+          route: 'fallback',
+          max_tokens: 300,
+          messages: [{
+            role: 'user',
+            content: 'You are a tango historian. Return a JSON object (no markdown, no explanation) for the Argentine tango orchestra "' + artistName + '" with these fields: name (string), nickname (string or null), era (string, e.g. "1940 – 1960"), style (short phrase), characteristics (array of 3-4 short strings), notable_singers (array of up to 3 names). If unknown, make a reasonable historical estimate.',
+          }],
+        }),
+      });
+      if (!resp.ok) { _orchestraBioCache[key] = null; return; }
+      const data = await resp.json();
+      const raw = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      if (!raw) { _orchestraBioCache[key] = null; return; }
+      // Strip possible markdown fences
+      const jsonStr = raw.replace(/^```[\s\S]*?\n/, '').replace(/```$/, '').trim();
+      const bio = JSON.parse(jsonStr);
+      _orchestraBioCache[key] = bio;
+      _pushState(Object.assign({}, basePayload, { orchestraBio: bio }));
+    } catch (e) {
+      _orchestraBioCache[key] = null;
+    }
   }
 
   async function _maybeTranslateTitle(title, basePayload) {
