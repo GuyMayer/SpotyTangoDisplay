@@ -45,6 +45,10 @@ Section "Main"
   SetOutPath "$INSTDIR\data"
   File "${ROOT}\data\*.json"
 
+  ; Reset working dir to install root before creating shortcut
+  ; (NSIS uses $OUTDIR as the shortcut "Start in" folder)
+  SetOutPath "$INSTDIR"
+
   ; Desktop shortcut → launches start-windows.bat
   CreateShortcut "$DESKTOP\SpotyTangoDisplay.lnk" \
     "cmd.exe" \

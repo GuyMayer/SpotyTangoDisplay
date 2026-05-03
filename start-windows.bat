@@ -1,5 +1,7 @@
 @echo off
 title SpotyTangoDisplay Relay
+:: Always run from the folder containing this script
+cd /d "%~dp0"
 echo.
 echo Starting SpotyTangoDisplay...
 echo.
