@@ -52,6 +52,6 @@ exit /b 1
 :start_relay
 
 :: Launch tray app in a new detached window, then exit this one
-start "SpotyTangoDisplayTray" /min powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File "%~dp0relay-tray.ps1"
+start "SpotyTangoDisplayTray" /min powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "%~dp0relay-tray.ps1"
 exit
 pause >nul

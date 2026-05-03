@@ -29,17 +29,14 @@ Set-Location $PSScriptRoot
 
 # Log file for relay stdout/stderr
 $relayLog = "$env:TEMP\SpotyTangoDisplay-relay.log"
-"" | Out-File $relayLog -Encoding utf8
 
-# Start relay.js hidden, capturing output to log
+# Start relay.js via cmd.exe so redirection is handled by the shell (avoids PS buffer deadlock)
 $relay = Start-Process `
-    -FilePath "node" `
-    -ArgumentList "relay.js" `
+    -FilePath "cmd.exe" `
+    -ArgumentList "/c node relay.js > `"$relayLog`" 2>&1" `
     -WorkingDirectory $PSScriptRoot `
     -PassThru `
-    -WindowStyle Hidden `
-    -RedirectStandardOutput $relayLog `
-    -RedirectStandardError "$env:TEMP\SpotyTangoDisplay-relay-err.log"
+    -WindowStyle Hidden
 
 # Build a simple tray icon (16x16 purple square with white T)
 $bmp = New-Object System.Drawing.Bitmap 16, 16
@@ -86,9 +83,8 @@ $debugItem.Add_Click({
     }
     $ver   = try { (Get-Content "$PSScriptRoot\version.txt" -ErrorAction Stop).Trim() } catch { "unknown" }
     $nodeV = try { (& node --version 2>$null).Trim() } catch { "not found" }
-    $logOut = try { (Get-Content "$env:TEMP\SpotyTangoDisplay-relay.log"     -Tail 20 -ErrorAction Stop) -join "`n" } catch { "(no log)" }
-    $logErr = try { (Get-Content "$env:TEMP\SpotyTangoDisplay-relay-err.log" -Tail 20 -ErrorAction Stop) -join "`n" } catch { "" }
-    $logSection = if ($logErr) { "`n--- relay stderr ---`n$logErr`n--- relay stdout ---`n$logOut" } else { "`n--- relay log ---`n$logOut" }
+    $logOut = try { (Get-Content "$env:TEMP\SpotyTangoDisplay-relay.log" -Tail 30 -ErrorAction Stop) -join "`n" } catch { "(no log)" }
+    $logSection = "`n--- relay log (stdout+stderr) ---`n$logOut"
     $msg   = "relay.js PID : $pid_`nPort 3456   : $(if ($portOk) { 'open' } else { 'closed' })`nHTTP GET /  : $httpStatus`nVersion     : $ver`nNode        : $nodeV`nScriptRoot  : $PSScriptRoot$logSection"
     [System.Windows.Forms.MessageBox]::Show($msg, "SpotyTangoDisplay Debug", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information) | Out-Null
 })
