@@ -3,7 +3,7 @@ Add-Type -AssemblyName System.Drawing
 
 # Kill any previous tray instance (other powershell running relay-tray.ps1, not us)
 try {
-    Get-WmiObject Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+    Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
         Where-Object { $_.CommandLine -like '*relay-tray.ps1*' -and $_.ProcessId -ne $PID } |
         ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 } catch {}
@@ -14,7 +14,7 @@ try {
     if ($owned) { Stop-Process -Id $owned.OwningProcess -Force -ErrorAction SilentlyContinue }
 } catch {}
 try {
-    Get-WmiObject Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyContinue |
+    Get-CimInstance Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyContinue |
         Where-Object { $_.CommandLine -like '*relay.js*' } |
         ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 } catch {}
@@ -86,8 +86,8 @@ $debugItem.Add_Click({
     }
     $ver   = try { (Get-Content "$PSScriptRoot\version.txt" -ErrorAction Stop).Trim() } catch { "unknown" }
     $nodeV = try { (& node --version 2>$null).Trim() } catch { "not found" }
-    $logOut = try { (Get-Content "$env:TEMP\SpotyTangoDisplay-relay.log" -Tail 20 -ErrorAction Stop) -join "`n" } catch { "(no log)" }
-    $logErr = try { (Get-Content "$env:TEMP\SpotyTangoDisplay-relay-err.log" -Tail 10 -ErrorAction Stop) -join "`n" } catch { "" }
+    $logOut = try { (Get-Content "$env:TEMP\SpotyTangoDisplay-relay.log"     -Tail 20 -ErrorAction Stop) -join "`n" } catch { "(no log)" }
+    $logErr = try { (Get-Content "$env:TEMP\SpotyTangoDisplay-relay-err.log" -Tail 20 -ErrorAction Stop) -join "`n" } catch { "" }
     $logSection = if ($logErr) { "`n--- relay stderr ---`n$logErr`n--- relay stdout ---`n$logOut" } else { "`n--- relay log ---`n$logOut" }
     $msg   = "relay.js PID : $pid_`nPort 3456   : $(if ($portOk) { 'open' } else { 'closed' })`nHTTP GET /  : $httpStatus`nVersion     : $ver`nNode        : $nodeV`nScriptRoot  : $PSScriptRoot$logSection"
     [System.Windows.Forms.MessageBox]::Show($msg, "SpotyTangoDisplay Debug", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information) | Out-Null
@@ -118,10 +118,20 @@ $tray.Add_DoubleClick({ Start-Process "http://localhost:3456/" })
 # Balloon tip on startup
 $tray.ShowBalloonTip(3000, "SpotyTangoDisplay", "Relay running - double-click to open.", [System.Windows.Forms.ToolTipIcon]::Info)
 
-# Open browser once relay responds to HTTP (not just TCP open)
+# Open browser once relay responds to HTTP — give up after 30s and show error balloon
 $timer          = New-Object System.Windows.Forms.Timer
 $timer.Interval = 500
+$pollCount      = 0
 $timer.Add_Tick({
+    $pollCount++
+    if ($pollCount -gt 60) {
+        $timer.Stop()
+        $tray.BalloonTipTitle = "SpotyTangoDisplay"
+        $tray.BalloonTipText  = "Relay failed to start - right-click for Debug Info"
+        $tray.BalloonTipIcon  = [System.Windows.Forms.ToolTipIcon]::Error
+        $tray.ShowBalloonTip(8000)
+        return
+    }
     try {
         $r = Invoke-WebRequest -Uri "http://localhost:3456/" -UseBasicParsing -TimeoutSec 1 -ErrorAction Stop
         if ($r.StatusCode -eq 200) {
