@@ -5,18 +5,16 @@
 // Usage:
 //   node relay.js
 //
-// Then open the dancer screen with (pick your LAN IP from the list below):
-//   display.html?host=192.168.1.x:3456
-//
-// From the same machine:
-//   display.html?host=localhost:3456
+// Tries port 3456 first, then 3457–3465 if busy.
+// The console prints whichever port it binds to.
 
 'use strict';
 
 const http = require('http');
 const os   = require('os');
 
-const PORT = parseInt(process.env.PORT || '3456', 10);
+const BASE_PORT = parseInt(process.env.PORT || '3456', 10);
+const MAX_TRIES = 10;
 
 const clients  = new Set();
 let _lastState = null;
@@ -73,19 +71,37 @@ const server = http.createServer((req, res) => {
   res.writeHead(404, { 'Content-Type': 'text/plain' }).end('Not found');
 });
 
-server.listen(PORT, '0.0.0.0', () => {
+function _printUrls(port) {
   const nets = os.networkInterfaces();
   console.log('\nSpotyTangoDisplay Local Relay');
   console.log('─'.repeat(45));
   console.log('Display URL from this machine:');
-  console.log('  display.html?host=localhost:' + PORT);
+  console.log('  display.html?host=localhost:' + port);
   console.log('\nDisplay URL from another device on the same WiFi:');
   for (const addrs of Object.values(nets)) {
     for (const addr of addrs) {
       if (addr.family === 'IPv4' && !addr.internal) {
-        console.log('  display.html?host=' + addr.address + ':' + PORT);
+        console.log('  display.html?host=' + addr.address + ':' + port);
       }
     }
   }
   console.log('\nWaiting for connections...\n');
+}
+
+function tryListen(port, triesLeft) {
+  server.listen(port, '0.0.0.0')
+    .once('listening', () => _printUrls(port))
+    .once('error', err => {
+      if (err.code === 'EADDRINUSE' && triesLeft > 1) {
+        console.warn('[relay] Port ' + port + ' in use, trying ' + (port + 1) + '…');
+        server.close();
+        tryListen(port + 1, triesLeft - 1);
+      } else {
+        console.error('[relay] Could not bind to a port:', err.message);
+        process.exit(1);
+      }
+    });
+}
+
+tryListen(BASE_PORT, MAX_TRIES);
 });
