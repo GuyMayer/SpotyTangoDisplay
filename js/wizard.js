@@ -178,20 +178,36 @@ const Wizard = (() => {
   function _renderSpotify(body) {
     const clientId = localStorage.getItem('spotd_spotify_client_id') || '';
     const loggedIn = Spotify && Spotify.isLoggedIn && Spotify.isLoggedIn();
+    const redirectUri = window.location.origin + window.location.pathname.replace(/index\.html$/, '');
 
     body.innerHTML = `
       <h2>Connect Spotify</h2>
-      <p>You need a free Spotify Developer App to authenticate. Takes about 2 minutes.</p>
+
+      <div class="wiz-redirect-box">
+        <div class="wiz-redirect-label">Redirect URI — add this to your Spotify app</div>
+        <div class="wiz-redirect-row">
+          <code id="wiz-redirect-uri" class="wiz-redirect-uri">${_esc(redirectUri)}</code>
+          <button id="wiz-copy-redirect" class="wiz-btn ghost small">Copy</button>
+        </div>
+      </div>
+
       <ol class="wiz-steps-list">
-        <li>Go to <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a></li>
-        <li>Click <strong>Create App</strong></li>
-        <li>Set the Redirect URI to: <code class="wiz-code">${window.location.origin}${window.location.pathname.replace('index.html','')}</code></li>
-        <li>Copy your <strong>Client ID</strong> and paste it below</li>
+        <li>Open your app in <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a></li>
+        <li>Click <strong>Edit Settings</strong></li>
+        <li>Under <strong>Redirect URIs</strong>, add the URI above and click <strong>Save</strong></li>
+        <li>Paste your <strong>Client ID</strong> below</li>
       </ol>
+
       <label class="wiz-label">Spotify Client ID
         <input id="wiz-spotify-client-id" class="wiz-input" type="text"
           placeholder="e.g. 1a2b3c4d5e6f..." value="${_esc(clientId)}" autocomplete="off">
       </label>
+      <div id="wiz-dashboard-link-row" class="wiz-hint" style="margin-bottom:12px;display:${clientId ? 'block' : 'none'}">
+        <a id="wiz-dashboard-link" href="https://developer.spotify.com/dashboard/${_esc(clientId)}" target="_blank" rel="noopener">
+          Open this app's settings ↗
+        </a> — go to Edit Settings → Redirect URIs
+      </div>
+
       <div id="wiz-spotify-status" class="wiz-status ${loggedIn ? 'ok' : ''}">
         ${loggedIn ? '✓ Spotify connected' : ''}
       </div>
@@ -200,6 +216,27 @@ const Wizard = (() => {
       </button>
     `;
 
+    // Copy redirect URI
+    document.getElementById('wiz-copy-redirect').addEventListener('click', () => {
+      navigator.clipboard.writeText(redirectUri).then(() => {
+        document.getElementById('wiz-copy-redirect').textContent = 'Copied!';
+        setTimeout(() => { document.getElementById('wiz-copy-redirect').textContent = 'Copy'; }, 2000);
+      });
+    });
+
+    // Update dashboard link as user types client ID
+    document.getElementById('wiz-spotify-client-id').addEventListener('input', e => {
+      const id = e.target.value.trim();
+      const row  = document.getElementById('wiz-dashboard-link-row');
+      const link = document.getElementById('wiz-dashboard-link');
+      if (id.length > 10) {
+        link.href = 'https://developer.spotify.com/dashboard/' + encodeURIComponent(id);
+        row.style.display = 'block';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
     document.getElementById('wiz-spotify-connect').addEventListener('click', () => {
       const id = document.getElementById('wiz-spotify-client-id').value.trim();
       if (!id) { _showError('wiz-spotify-status', 'Enter your Client ID first'); return; }
@@ -207,6 +244,16 @@ const Wizard = (() => {
       CONFIG.spotify.clientId = id;
       Spotify.login();
     });
+  }
+
+  function _parsePusherBlock(text) {
+    // Parses the block copied from Pusher dashboard App Keys tab:
+    //   app_id = "YOUR_APP_ID"
+    //   key = "YOUR_KEY"
+    //   secret = "YOUR_SECRET"
+    //   cluster = "eu"
+    const get = (key) => { const m = text.match(new RegExp(key + '\\s*=\\s*["\']([^"\']+)["\']')); return m ? m[1] : ''; };
+    return { appId: get('app_id'), key: get('key'), secret: get('secret'), cluster: get('cluster') };
   }
 
   function _renderPusher(body) {
@@ -218,8 +265,12 @@ const Wizard = (() => {
       <ol class="wiz-steps-list">
         <li>Sign up (free) at <a href="https://pusher.com" target="_blank" rel="noopener">pusher.com</a></li>
         <li>Create a new <strong>Channels</strong> app</li>
-        <li>Go to <strong>App Keys</strong> and copy the four values below</li>
+        <li>Go to <strong>App Keys</strong>, click <strong>Copy</strong>, then paste below</li>
       </ol>
+      <label class="wiz-label">Paste App Keys block
+        <textarea id="wiz-pusher-paste" class="wiz-input" rows="4" placeholder='app_id = "12345"&#10;key = "abc..."&#10;secret = "xyz..."&#10;cluster = "eu"' style="font-family:monospace;font-size:12px;resize:vertical"></textarea>
+      </label>
+      <p class="wiz-hint" style="text-align:center;margin:4px 0 12px;color:var(--text-muted,#888);font-size:13px">— or enter values manually —</p>
       <label class="wiz-label">App ID
         <input id="wiz-pusher-app-id" class="wiz-input" type="text" placeholder="12345" value="${_esc(creds.appId||'')}">
       </label>
@@ -235,6 +286,14 @@ const Wizard = (() => {
       <div id="wiz-pusher-status" class="wiz-status"></div>
       <button id="wiz-pusher-test" class="wiz-btn secondary">Test Connection</button>
     `;
+
+    document.getElementById('wiz-pusher-paste').addEventListener('input', (e) => {
+      const parsed = _parsePusherBlock(e.target.value);
+      if (parsed.appId) document.getElementById('wiz-pusher-app-id').value = parsed.appId;
+      if (parsed.key)   document.getElementById('wiz-pusher-key').value   = parsed.key;
+      if (parsed.secret) document.getElementById('wiz-pusher-secret').value = parsed.secret;
+      if (parsed.cluster) document.getElementById('wiz-pusher-cluster').value = parsed.cluster;
+    });
 
     document.getElementById('wiz-pusher-test').addEventListener('click', async () => {
       const creds = _readPusherFields();
