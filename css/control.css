@@ -242,20 +242,6 @@ main {
   flex-shrink: 0;
 }
 
-#np-badge {
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  padding: 2px 8px;
-  border-radius: 4px;
-  text-transform: uppercase;
-  background: var(--surface2);
-  color: var(--text-muted);
-}
-
-#np-badge.playing  { display: none; }
-#np-badge.cortina  { background: rgba(255,152,0,0.15); color: var(--orange); }
-#np-badge.paused   { color: var(--text-muted); }
-
 #np-override-row {
   display: flex;
   gap: 4px;

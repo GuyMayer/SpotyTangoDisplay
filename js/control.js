@@ -6,6 +6,7 @@ const Control = (() => {
   let _format = 'tandas-cortinas'; // 'tandas-cortinas' | 'tandas-nocortinas' | 'single'
   let _lastTrack = null;
   let _currentTrackId = null;    // track ID for per-track DB overrides
+  let _currentDetectedType = ''; // auto-detected type for current track
   let _source = 'spotify';       // 'spotify' | 'live'
   let _pusherConnected = false;
   let _spotifyConnected = false;
@@ -192,7 +193,6 @@ const Control = (() => {
     // Update per-track override UI whenever track changes
     if (track.id !== _currentTrackId) {
       _currentTrackId = track.id;
-      _updateTrackOverrideRow(track.id);
     }
 
     // Cortina detection (sync from cache — full async detection happens in _pushCurrentState)
@@ -234,6 +234,11 @@ const Control = (() => {
 
     // Year: DB recording year > Spotify release year
     const year = dbResult.year || (track.album && track.album.release_date && track.album.release_date.slice(0, 4));
+
+    // Populate type field in override row
+    const detectedType = showCortina ? 'Cortina' : (genre || '');
+    _currentDetectedType = detectedType;
+    _updateTrackOverrideRow(track.id, detectedType);
 
     // Update "now playing" panel
     _setNowPlaying(track, isPlaying, genres, rawCortina, tandaPos);
@@ -435,13 +440,11 @@ const Control = (() => {
     const artistEl = document.getElementById('np-artist');
     const titleEl  = document.getElementById('np-title');
     const metaEl   = document.getElementById('np-meta');
-    const badgeEl  = document.getElementById('np-badge');
 
     if (!track) {
       if (artistEl) artistEl.textContent = isPlaying ? 'Playing…' : 'Nothing playing';
       if (titleEl)  titleEl.textContent = '';
       if (metaEl)   metaEl.textContent  = '';
-      if (badgeEl)  { badgeEl.textContent = isPlaying ? '' : 'PAUSED'; badgeEl.className = 'paused'; }
       if (artEl)    artEl.classList.add('hidden');
       return;
     }
@@ -464,11 +467,6 @@ const Control = (() => {
       else artEl.classList.add('hidden');
     }
 
-    if (badgeEl) {
-      if (!isPlaying)   { badgeEl.textContent = 'PAUSED';  badgeEl.className = 'paused';  }
-      else if (isCortina) { badgeEl.textContent = 'CORTINA'; badgeEl.className = 'cortina'; }
-      else              { badgeEl.textContent = 'PLAYING'; badgeEl.className = 'playing'; }
-    }
   }
 
   // ── Status indicators ─────────────────────────────────────────────────────
@@ -553,24 +551,28 @@ const Control = (() => {
         if (_currentTrackId) {
           TangoDB.setOverride(_currentTrackId, null);
           input.value = '';
+          input.placeholder = _currentDetectedType || 'Type…';
           _pushCurrentState();
         }
       });
     }
   }
 
-  function _updateTrackOverrideRow(trackId) {
+  function _updateTrackOverrideRow(trackId, detectedType) {
     const row   = document.getElementById('np-override-row');
     const input = document.getElementById('np-type-override');
     if (!row || !input) return;
 
     if (!trackId) {
       row.classList.add('hidden');
+      input.value = '';
+      input.placeholder = 'Type…';
       return;
     }
 
     const existing = TangoDB.getOverride(trackId);
-    input.value = existing || '';
+    input.value       = existing || '';
+    input.placeholder = detectedType || 'Type…';
     row.classList.remove('hidden');
   }
 
