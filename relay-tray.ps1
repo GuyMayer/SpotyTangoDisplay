@@ -16,13 +16,28 @@ if (-not $mutex.WaitOne(0)) {
 
 Set-Location $PSScriptRoot
 
-# Start relay.js hidden
+# Kill any orphaned relay process already on port 3456
+try {
+    $owned = Get-NetTCPConnection -LocalPort 3456 -State Listen -ErrorAction SilentlyContinue
+    if ($owned) {
+        Stop-Process -Id $owned.OwningProcess -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Milliseconds 500
+    }
+} catch {}
+
+# Log file for relay stdout/stderr
+$relayLog = "$env:TEMP\SpotyTangoDisplay-relay.log"
+"" | Out-File $relayLog -Encoding utf8
+
+# Start relay.js hidden, capturing output to log
 $relay = Start-Process `
     -FilePath "node" `
     -ArgumentList "relay.js" `
     -WorkingDirectory $PSScriptRoot `
     -PassThru `
-    -WindowStyle Hidden
+    -WindowStyle Hidden `
+    -RedirectStandardOutput $relayLog `
+    -RedirectStandardError "$env:TEMP\SpotyTangoDisplay-relay-err.log"
 
 # Build a simple tray icon (16x16 purple square with white T)
 $bmp = New-Object System.Drawing.Bitmap 16, 16
@@ -69,7 +84,10 @@ $debugItem.Add_Click({
     }
     $ver   = try { (Get-Content "$PSScriptRoot\version.txt" -ErrorAction Stop).Trim() } catch { "unknown" }
     $nodeV = try { (& node --version 2>$null).Trim() } catch { "not found" }
-    $msg   = "relay.js PID : $pid_`nPort 3456   : $(if ($portOk) { 'open' } else { 'closed' })`nHTTP GET /  : $httpStatus`nVersion     : $ver`nNode        : $nodeV`nScriptRoot  : $PSScriptRoot"
+    $logOut = try { (Get-Content "$env:TEMP\SpotyTangoDisplay-relay.log" -Tail 20 -ErrorAction Stop) -join "`n" } catch { "(no log)" }
+    $logErr = try { (Get-Content "$env:TEMP\SpotyTangoDisplay-relay-err.log" -Tail 10 -ErrorAction Stop) -join "`n" } catch { "" }
+    $logSection = if ($logErr) { "`n--- relay stderr ---`n$logErr`n--- relay stdout ---`n$logOut" } else { "`n--- relay log ---`n$logOut" }
+    $msg   = "relay.js PID : $pid_`nPort 3456   : $(if ($portOk) { 'open' } else { 'closed' })`nHTTP GET /  : $httpStatus`nVersion     : $ver`nNode        : $nodeV`nScriptRoot  : $PSScriptRoot$logSection"
     [System.Windows.Forms.MessageBox]::Show($msg, "SpotyTangoDisplay Debug", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information) | Out-Null
 })
 
