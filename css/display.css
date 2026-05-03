@@ -92,6 +92,7 @@ html, body {
   gap: 12px;
   text-align: center;
   width: 100%;
+  position: relative;
 }
 
 #artwork-wrap {
@@ -174,6 +175,28 @@ html, body {
 
 #coming-up-artist { font-size: 22px; color: #ccc; }
 #coming-up-genre  { font-size: 18px; }
+
+/* ── Track-screen next preview ───────────────────────────────── */
+#track-next {
+  position: absolute;
+  bottom: 28px;
+  left: 0; right: 0;
+  text-align: center;
+  padding: 0 24px;
+}
+
+#track-next-header {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #555;
+  margin-bottom: 6px;
+}
+
+#track-next-detail {
+  font-size: 18px;
+  color: #999;
+}
 
 /* ── Connection status badge ──────────────────────────────────── */
 

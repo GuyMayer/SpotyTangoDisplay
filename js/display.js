@@ -27,6 +27,9 @@ const Display = (() => {
     trackGenre:   $('track-genre'),
     trackYear:    $('track-year'),
     tandaCounter: $('tanda-counter'),
+    trackNext:       $('track-next'),
+    trackNextHeader: $('track-next-header'),
+    trackNextDetail: $('track-next-detail'),
 
     cortinaScreen: $('cortina-screen'),
     cortinaLabel:  $('cortina-label'),
@@ -247,15 +250,15 @@ const Display = (() => {
     }
 
     // Next track / next tanda preview on track screen
-    const cuFields = _fieldsById(_profile.comingUpFields || []);
     if (data.nextArtist) {
-      const header = document.getElementById('coming-up-header');
-      if (header) header.textContent = data.nextLabel || 'Next';
-      _setTextField(els.comingUpArtist, cuFields, 'artist', data.nextArtist);
-      _setTextField(els.comingUpGenre,  cuFields, 'genre',  data.nextGenre);
-      els.comingUp.classList.remove('hidden');
+      els.trackNextHeader.textContent = data.nextLabel || 'Next';
+      const detail = data.nextGenre
+        ? data.nextGenre + (data.nextArtist ? ' · ' + data.nextArtist : '')
+        : data.nextArtist;
+      els.trackNextDetail.textContent = detail;
+      els.trackNext.classList.remove('hidden');
     } else {
-      els.comingUp.classList.add('hidden');
+      els.trackNext.classList.add('hidden');
     }
 
     // Reorder DOM elements to match field order
