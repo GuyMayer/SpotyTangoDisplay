@@ -50,6 +50,22 @@ $openItem.Add_Click({ Start-Process "http://localhost:3456/" })
 
 $sep = New-Object System.Windows.Forms.ToolStripSeparator
 
+$debugItem = New-Object System.Windows.Forms.ToolStripMenuItem
+$debugItem.Text = "Debug Info"
+$debugItem.Add_Click({
+    $pid_  = if ($relay -and -not $relay.HasExited) { $relay.Id } else { "stopped" }
+    $portOk = $false
+    try {
+        $t = New-Object System.Net.Sockets.TcpClient; $t.Connect("127.0.0.1", 3456); $t.Close(); $portOk = $true
+    } catch {}
+    $ver   = try { (Get-Content "$PSScriptRoot\version.txt" -ErrorAction Stop).Trim() } catch { "unknown" }
+    $nodeV = try { (& node --version 2>$null).Trim() } catch { "not found" }
+    $msg   = "relay.js PID : $pid_`nPort 3456   : $(if ($portOk) { 'open' } else { 'closed' })`nVersion     : $ver`nNode        : $nodeV`nScriptRoot  : $PSScriptRoot"
+    [System.Windows.Forms.MessageBox]::Show($msg, "SpotyTangoDisplay Debug", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information) | Out-Null
+})
+
+$sep2 = New-Object System.Windows.Forms.ToolStripSeparator
+
 $exitItem = New-Object System.Windows.Forms.ToolStripMenuItem
 $exitItem.Text = "Exit"
 $exitItem.Add_Click({
@@ -63,6 +79,8 @@ $exitItem.Add_Click({
 
 $menu.Items.Add($openItem) | Out-Null
 $menu.Items.Add($sep)      | Out-Null
+$menu.Items.Add($debugItem) | Out-Null
+$menu.Items.Add($sep2)     | Out-Null
 $menu.Items.Add($exitItem) | Out-Null
 
 $tray.ContextMenuStrip = $menu
