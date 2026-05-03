@@ -139,6 +139,8 @@ const Control = (() => {
     let genre;
     if (_danceOverride === 'none') {
       genre = null;
+    } else if (_danceOverride === 'db') {
+      genre = dbResult.type || null;  // DB only, no Spotify fallback
     } else if (_danceOverride) {
       genre = _danceOverride;
     } else if (dbResult.type) {
@@ -431,7 +433,10 @@ const Control = (() => {
   function _updateDanceOverrideBadge() {
     const badge = document.getElementById('dance-override-badge');
     if (!badge) return;
-    if (_danceOverride) {
+    if (_danceOverride === 'db') {
+      badge.textContent = 'DB';
+      badge.className = 'dance-override-badge active';
+    } else if (_danceOverride) {
       badge.textContent = _danceOverride;
       badge.className = 'dance-override-badge active';
     } else {
