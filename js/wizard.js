@@ -487,7 +487,12 @@ const Wizard = (() => {
             'HTTP-Referer': 'https://guymayer.github.io/SpotyTangoDisplay/',
           },
           body: JSON.stringify({
-            model: 'google/gemma-3-27b-it:free',
+            models: [
+            'google/gemma-3-27b-it:free',
+            'meta-llama/llama-3.3-70b-instruct:free',
+            'nousresearch/hermes-3-llama-3.1-405b:free',
+          ],
+            route: 'fallback',
             max_tokens: 10,
             messages: [{ role: 'user', content: 'Reply with the single word: ok' }],
           }),
