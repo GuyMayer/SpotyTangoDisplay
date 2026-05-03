@@ -2,9 +2,11 @@
 // https://audd.io — POST audio clip, receive song identification
 
 const AudD = (() => {
-  const STORAGE_KEY = 'spotd_audd_key';
-  const RECORD_MS   = 8000;               // 8s clip — enough for a clean recognition
-  const API_URL     = 'https://api.audd.io/';
+  const STORAGE_KEY      = 'spotd_audd_key';
+  const RECORD_MS         = 8000;   // 8s clip
+  const API_URL           = 'https://api.audd.io/';
+  const SILENCE_THRESHOLD = 0.012;  // RMS below this = no audio input
+  const SILENCE_CHECK_MS  = 1500;   // sample for 1.5s before committing
 
   let _stream = null;
 
@@ -14,6 +16,40 @@ const AudD = (() => {
   function setKey(k) {
     if (k && k.trim()) localStorage.setItem(STORAGE_KEY, k.trim());
     else                localStorage.removeItem(STORAGE_KEY);
+  }
+
+  // ── Silence detection ────────────────────────────────────────────────────
+
+  // Resolves true if audio level is above threshold, false if silent
+  function _hasAudio(stream) {
+    return new Promise(resolve => {
+      let ctx;
+      try {
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const source   = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        const buf = new Float32Array(analyser.fftSize);
+        let maxRms = 0;
+        const iv = setInterval(() => {
+          analyser.getFloatTimeDomainData(buf);
+          let sum = 0;
+          for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+          const rms = Math.sqrt(sum / buf.length);
+          if (rms > maxRms) maxRms = rms;
+        }, 80);
+        setTimeout(() => {
+          clearInterval(iv);
+          try { source.disconnect(); ctx.close(); } catch (_) {}
+          resolve(maxRms >= SILENCE_THRESHOLD);
+        }, SILENCE_CHECK_MS);
+      } catch (_) {
+        // AudioContext unavailable — proceed anyway
+        if (ctx) try { ctx.close(); } catch (_) {}
+        resolve(true);
+      }
+    });
   }
 
   // ── Mic capture ───────────────────────────────────────────────────────────
@@ -47,6 +83,11 @@ const AudD = (() => {
     if (!key) throw new Error('AudD API key not set');
 
     const stream = await _getStream();
+
+    // Check for audio input before committing to a full recording
+    const audioPresent = await _hasAudio(stream);
+    if (!audioPresent) return { status: 'no-audio', result: null };
+
     const blob   = await _record(stream, RECORD_MS);
 
     const form = new FormData();

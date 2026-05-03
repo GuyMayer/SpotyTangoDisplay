@@ -568,7 +568,10 @@ const Display = (() => {
     _setLiveIndicator('listening');
     try {
       const resp = await AudD.recognize();
-      if (resp.status === 'success' && resp.result) {
+      if (resp.status === 'no-audio') {
+        // Mic is silent — no music playing, skip silently and stay in listening state
+        return;
+      } else if (resp.status === 'success' && resp.result) {
         const r = resp.result;
         const year = r.release_date ? r.release_date.slice(0, 4) : null;
         // Synthesize a track payload and feed it through the normal renderer
