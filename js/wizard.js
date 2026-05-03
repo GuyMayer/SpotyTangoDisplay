@@ -6,7 +6,7 @@ const Wizard = (() => {
   const STORAGE_STEP = 'spotd_wizard_step';   // resume step if closed mid-way
 
   let _currentStep = 1;
-  const TOTAL_STEPS = 6;
+  const TOTAL_STEPS = 7;
 
   // ── Step definitions ──────────────────────────────────────────────────────
 
@@ -14,9 +14,10 @@ const Wizard = (() => {
     1: { id: 'welcome',   title: 'Welcome'          },
     2: { id: 'spotify',   title: 'Spotify'          },
     3: { id: 'pusher',    title: 'Display Relay'    },
-    4: { id: 'branding',  title: 'Branding'         },
-    5: { id: 'cortina',   title: 'Cortina Rules'    },
-    6: { id: 'done',      title: 'Done!'            },
+    4: { id: 'audd',      title: 'Live Recognition' },
+    5: { id: 'branding',  title: 'Branding'         },
+    6: { id: 'cortina',   title: 'Cortina Rules'    },
+    7: { id: 'done',      title: 'Done!'            },
   };
 
   // ── Public entry points ───────────────────────────────────────────────────
@@ -136,8 +137,8 @@ const Wizard = (() => {
     if (nextBtn) nextBtn.classList.toggle('hidden', _currentStep === TOTAL_STEPS);
     if (doneBtn) doneBtn.classList.toggle('hidden', _currentStep !== TOTAL_STEPS);
     if (skipBtn) {
-      // Skip visible on optional steps 5 only
-      skipBtn.classList.toggle('hidden', ![5].includes(_currentStep));
+      // Skip visible on optional steps 4 and 6
+      skipBtn.classList.toggle('hidden', ![4, 6].includes(_currentStep));
     }
   }
 
@@ -152,9 +153,10 @@ const Wizard = (() => {
       case 1: _renderWelcome(body);   break;
       case 2: _renderSpotify(body);   break;
       case 3: _renderPusher(body);    break;
-      case 4: _renderBranding(body);  break;
-      case 5: _renderCortina(body);   break;
-      case 6: _renderDone(body);      break;
+      case 4: _renderAudD(body);      break;
+      case 5: _renderBranding(body);  break;
+      case 6: _renderCortina(body);   break;
+      case 7: _renderDone(body);      break;
     }
   }
 
@@ -317,6 +319,67 @@ const Wizard = (() => {
     });
   }
 
+  function _renderAudD(body) {
+    const existingKey = localStorage.getItem('spotd_audd_key') || '';
+    body.innerHTML = `
+      <h2>Live Recognition <span class="wiz-optional">(optional)</span></h2>
+      <p>AudD identifies music from a microphone on the display screen — useful when you’re not using Spotify, or want automatic detection from the room sound.</p>
+      <ol class="wiz-steps-list">
+        <li>Sign up (free) at <a href="https://dashboard.audd.io" target="_blank" rel="noopener">dashboard.audd.io</a></li>
+        <li>Copy your API token</li>
+        <li>Paste it below</li>
+      </ol>
+      <p class="wiz-hint" style="color:#ff9800">Free tier: 300 requests/month ≈ 2.5 hours of a milonga (at 30s intervals).</p>
+      <label class="wiz-label">AudD API Token
+        <input id="wiz-audd-key" class="wiz-input" type="text" placeholder="test (or your token)" value="${_esc(existingKey)}" autocomplete="off">
+      </label>
+      <div id="wiz-audd-status" class="wiz-status"></div>
+      <button id="wiz-audd-test" class="wiz-btn secondary">Test (record 4s → identify)</button>
+    `;
+
+    document.getElementById('wiz-audd-test').addEventListener('click', async () => {
+      const keyInput = document.getElementById('wiz-audd-key');
+      const statusEl = document.getElementById('wiz-audd-status');
+      const key = keyInput.value.trim();
+      if (!key) { statusEl.textContent = '\u2717 Enter a token first'; statusEl.className = 'wiz-status error'; return; }
+      // Temporarily set key so AudD module can use it
+      const prev = localStorage.getItem('spotd_audd_key');
+      localStorage.setItem('spotd_audd_key', key);
+      statusEl.textContent = 'Recording 4s…'; statusEl.className = 'wiz-status';
+      try {
+        // Shorten record time for the test via a quick direct fetch
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        const chunks = [];
+        const mr = new MediaRecorder(stream);
+        mr.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+        await new Promise(res => { mr.onstop = res; mr.start(); setTimeout(() => mr.stop(), 4000); });
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunks, { type: mr.mimeType });
+        const form = new FormData();
+        form.append('api_token', key);
+        form.append('audio', blob, 'clip.webm');
+        form.append('return', 'spotify');
+        statusEl.textContent = 'Identifying…';
+        const resp = await (await fetch('https://api.audd.io/', { method: 'POST', body: form })).json();
+        if (resp.status === 'success' && resp.result) {
+          statusEl.textContent = '\u2713 Identified: ' + resp.result.artist + ' — ' + resp.result.title;
+          statusEl.className = 'wiz-status ok';
+        } else if (resp.status === 'success') {
+          statusEl.textContent = '\u2713 API connected (no match in this clip — that\'s fine)';
+          statusEl.className = 'wiz-status ok';
+        } else {
+          statusEl.textContent = '\u2717 ' + (resp.error && resp.error.error_message || 'API error');
+          statusEl.className = 'wiz-status error';
+          if (prev) localStorage.setItem('spotd_audd_key', prev); else localStorage.removeItem('spotd_audd_key');
+        }
+      } catch (e) {
+        statusEl.textContent = '\u2717 ' + e.message;
+        statusEl.className = 'wiz-status error';
+        if (prev) localStorage.setItem('spotd_audd_key', prev); else localStorage.removeItem('spotd_audd_key');
+      }
+    });
+  }
+
   function _renderBranding(body) {
     const profile = Profiles.getActive();
     const b = profile.branding || {};
@@ -455,9 +518,18 @@ const Wizard = (() => {
     switch (step) {
       case 2: _saveSpotifyStep();  break;
       case 3: _savePusherStep();   break;
-      case 4: _saveBrandingStep(); break;
-      case 5: _saveCortinaStep();  break;
+      case 4: _saveAudDStep();     break;
+      case 5: _saveBrandingStep(); break;
+      case 6: _saveCortinaStep();  break;
     }
+  }
+
+  function _saveAudDStep() {
+    const el = document.getElementById('wiz-audd-key');
+    if (!el) return;
+    const val = el.value.trim();
+    if (val) localStorage.setItem('spotd_audd_key', val);
+    else     localStorage.removeItem('spotd_audd_key');
   }
 
   function _saveSpotifyStep() {

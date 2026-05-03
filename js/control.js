@@ -6,6 +6,7 @@ const Control = (() => {
   let _format = 'tandas-cortinas'; // 'tandas-cortinas' | 'tandas-nocortinas' | 'single'
   let _lastTrack = null;
   let _currentTrackId = null;    // track ID for per-track DB overrides
+  let _source = 'spotify';       // 'spotify' | 'live'
   let _pusherConnected = false;
   let _spotifyConnected = false;
   let _danceOverride = '';        // '' | 'Tango' | 'Milonga' | 'Vals' — DJ manual override
@@ -33,12 +34,52 @@ const Control = (() => {
     _bindDanceOverride();
     _bindFormat();
     _bindTrackOverride();
+    _loadSource();
+    _bindSourceToggle();
 
     _startSpotify();
     _startPusher();
     TangoDB.preload();
   }
+  // ── Input source (Spotify / Live AudD) ───────────────────────────────
 
+  function _loadSource() {
+    _source = localStorage.getItem('spotd_source') || 'spotify';
+    _updateSourceUI();
+  }
+
+  function _setSource(s) {
+    _source = s;
+    localStorage.setItem('spotd_source', s);
+    _updateSourceUI();
+    // Tell the display screen to switch
+    _pushState({ type: 'source-change', source: s });
+  }
+
+  function _updateSourceUI() {
+    document.querySelectorAll('.source-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.source === _source);
+    });
+    const statusEl = document.getElementById('audd-status');
+    const hintEl   = document.getElementById('audd-hint');
+    if (!statusEl) return;
+
+    if (_source === 'live') {
+      const hasKey = !!(localStorage.getItem('spotd_audd_key'));
+      statusEl.textContent = hasKey ? '✓ Live mode active' : '⚠️ No AudD key — set it in Settings';
+      statusEl.style.color = hasKey ? 'var(--accent)' : '#ff9800';
+      if (hintEl) hintEl.style.display = hasKey ? 'none' : 'block';
+    } else {
+      statusEl.textContent = '';
+      if (hintEl) hintEl.style.display = 'none';
+    }
+  }
+
+  function _bindSourceToggle() {
+    document.querySelectorAll('.source-btn').forEach(btn => {
+      btn.addEventListener('click', () => _setSource(btn.dataset.source));
+    });
+  }
   // ── Mode ──────────────────────────────────────────────────────────────────
 
   function _loadMode() {

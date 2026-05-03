@@ -51,6 +51,7 @@ const Display = (() => {
     comingUpGenre: $('coming-up-genre'),
     djMessageOverlay: $('dj-message-overlay'),
     djMessageText:    $('dj-message-text'),
+    liveIndicator:    $('live-indicator'),
   };
 
   let _profile = null;
@@ -60,6 +61,9 @@ const Display = (() => {
   let _localVideoActive = false;
   let _localVideos = [];
   let _localVideoIndex = 0;
+  let _liveSource = false;     // true = AudD mic mode
+  let _liveTimer  = null;      // setInterval handle
+  const LIVE_INTERVAL_MS = 30000;
 
   // ── Boot ──────────────────────────────────────────────────────────────────
 
@@ -75,6 +79,7 @@ const Display = (() => {
     _applyProfileStyles();
     _showIdle();
     _connectPusher();
+    _checkLiveSource();
 
     const videoBtn   = document.getElementById('local-video-btn');
     const videoInput = document.getElementById('local-video-input');
@@ -133,6 +138,12 @@ const Display = (() => {
   function _handleMessage(data) {
     if (data.type === 'dj-message') {
       _showDjMessage(data.message || '');
+      return;
+    }
+
+    if (data.type === 'source-change') {
+      if (data.source === 'live') _startLive();
+      else                        _stopLive();
       return;
     }
 
@@ -525,6 +536,74 @@ const Display = (() => {
       .map(f => elMap[f.id])
       .filter(Boolean);
     ordered.forEach(el => parent.appendChild(el));
+  }
+
+  // ── AudD live recognition ─────────────────────────────────────────────────
+
+  function _checkLiveSource() {
+    if (localStorage.getItem('spotd_source') === 'live') _startLive();
+  }
+
+  function _startLive() {
+    if (_liveSource) return;   // already running
+    if (typeof AudD === 'undefined' || !AudD.getKey()) {
+      console.warn('[display] AudD not available or no key set');
+      return;
+    }
+    _liveSource = true;
+    _setLiveIndicator('listening');
+    // Run immediately then repeat
+    _runAudD();
+    _liveTimer = setInterval(_runAudD, LIVE_INTERVAL_MS);
+  }
+
+  function _stopLive() {
+    _liveSource = false;
+    if (_liveTimer) { clearInterval(_liveTimer); _liveTimer = null; }
+    if (typeof AudD !== 'undefined') AudD.releaseStream();
+    _setLiveIndicator('off');
+  }
+
+  async function _runAudD() {
+    _setLiveIndicator('listening');
+    try {
+      const resp = await AudD.recognize();
+      if (resp.status === 'success' && resp.result) {
+        const r = resp.result;
+        const year = r.release_date ? r.release_date.slice(0, 4) : null;
+        // Synthesize a track payload and feed it through the normal renderer
+        _handleMessage({
+          state:    'playing',
+          mode:     localStorage.getItem('spotd_mode') || 'milonga',
+          format:   localStorage.getItem('spotd_format') || 'tandas-cortinas',
+          artist:   r.artist || '',
+          title:    r.title  || '',
+          year,
+          albumArt: r.spotify && r.spotify.album && r.spotify.album.images &&
+                    r.spotify.album.images[0] && r.spotify.album.images[0].url,
+          _fromLive: true,
+        });
+        _setLiveIndicator('identified');
+        // Revert indicator to listening after 3s
+        setTimeout(() => { if (_liveSource) _setLiveIndicator('listening'); }, 3000);
+      } else {
+        _setLiveIndicator('no-match');
+        setTimeout(() => { if (_liveSource) _setLiveIndicator('listening'); }, 3000);
+      }
+    } catch (err) {
+      console.warn('[display] AudD error:', err.message);
+      _setLiveIndicator('error');
+      setTimeout(() => { if (_liveSource) _setLiveIndicator('listening'); }, 5000);
+    }
+  }
+
+  function _setLiveIndicator(state) {
+    const el = els.liveIndicator;
+    if (!el) return;
+    el.className = 'live-indicator ' + state;
+    el.title = { listening: 'Listening…', identified: 'Track identified!',
+                 'no-match': 'No match', error: 'Recognition error', off: '' }[state] || '';
+    el.style.display = state === 'off' ? 'none' : 'flex';
   }
 
   function _setConnectionBadge(state, msg) {
