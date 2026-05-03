@@ -214,6 +214,10 @@ const Control = (() => {
       // Single tracks: show immediate next track
       const nextTrack = queue[0];
       nextArtist = nextTrack && nextTrack.artists && nextTrack.artists[0] && nextTrack.artists[0].name;
+      if (nextTrack && nextArtist) {
+        const dbNext = TangoDB.lookupSync(nextTrack.name, nextArtist, nextTrack.id);
+        nextGenre = dbNext.type;
+      }
       nextLabel = 'Next';
     } else {
       // Tandas: scan past cortinas to find first track of next tanda
