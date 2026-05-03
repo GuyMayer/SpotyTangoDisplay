@@ -16,14 +16,17 @@ if (-not $mutex.WaitOne(0)) {
 
 Set-Location $PSScriptRoot
 
-# Kill any orphaned relay process already on port 3456
+# Kill any existing relay — by port ownership and by matching node+relay.js command line
 try {
-    $owned = Get-NetTCPConnection -LocalPort 3456 -State Listen -ErrorAction SilentlyContinue
-    if ($owned) {
-        Stop-Process -Id $owned.OwningProcess -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Milliseconds 500
-    }
+    $owned = Get-NetTCPConnection -LocalPort 3456 -ErrorAction SilentlyContinue
+    if ($owned) { Stop-Process -Id $owned.OwningProcess -Force -ErrorAction SilentlyContinue }
 } catch {}
+try {
+    Get-WmiObject Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -like '*relay.js*' } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+} catch {}
+Start-Sleep -Milliseconds 600
 
 # Log file for relay stdout/stderr
 $relayLog = "$env:TEMP\SpotyTangoDisplay-relay.log"
