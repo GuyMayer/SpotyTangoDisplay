@@ -3,6 +3,7 @@
 const Control = (() => {
 
   let _mode = 'milonga';         // 'milonga' | 'lesson'
+  let _format = 'tandas-cortinas'; // 'tandas-cortinas' | 'tandas-nocortinas' | 'single'
   let _lastTrack = null;
   let _pusherConnected = false;
   let _spotifyConnected = false;
@@ -19,6 +20,7 @@ const Control = (() => {
 
     _loadMode();
     _loadDanceOverride();
+    _loadFormat();
     _renderProfileList();
     _renderRoomInfo();
     _renderStatusRow();
@@ -28,6 +30,7 @@ const Control = (() => {
     _bindSettingsBtn();
     _bindDjMessage();
     _bindDanceOverride();
+    _bindFormat();
 
     _startSpotify();
     _startPusher();
@@ -57,6 +60,24 @@ const Control = (() => {
   function _bindModeToggle() {
     document.querySelectorAll('.mode-btn').forEach(btn => {
       btn.addEventListener('click', () => _setMode(btn.dataset.mode));
+    });
+  }
+
+  // ── Format ────────────────────────────────────────────────────────────────
+
+  function _loadFormat() {
+    _format = localStorage.getItem('spotd_format') || 'tandas-cortinas';
+    const sel = document.getElementById('format-select');
+    if (sel) sel.value = _format;
+  }
+
+  function _bindFormat() {
+    const sel = document.getElementById('format-select');
+    if (!sel) return;
+    sel.addEventListener('change', () => {
+      _format = sel.value;
+      localStorage.setItem('spotd_format', _format);
+      _pushCurrentState();
     });
   }
 
@@ -92,13 +113,23 @@ const Control = (() => {
     }
 
     // Cortina detection (sync from cache — full async detection happens in _pushCurrentState)
-    const isCortina = track.id
+    const rawCortina = track.id
       ? Cortina.detectSync({ trackId: track.id, genres: genres || [] })
       : false;
 
+    // Apply format rules
+    // 'single' → never show cortinas, never show tanda counter
+    // 'tandas-nocortinas' → suppress cortina screen but keep tanda counter
+    // 'tandas-cortinas' → full behaviour
+    const showCortina = rawCortina.isCortina &&
+      _format === 'tandas-cortinas' &&
+      !(_danceOverride && _danceOverride !== 'none');
+    const isCortina = { isCortina: showCortina, label: rawCortina.label };
+    const showTanda = _format !== 'single';
+
     // Tanda tracking
-    if (track.id) Tanda.record(track.id, isCortina);
-    const tandaPos = isCortina ? null : Tanda.getPosition(track.id);
+    if (track.id) Tanda.record(track.id, rawCortina.isCortina);
+    const tandaPos = (rawCortina.isCortina || !showTanda) ? null : Tanda.getPosition(track.id);
 
     // DB lookup for dance type + recording year
     const artistName = track.artists && track.artists[0] && track.artists[0].name;
@@ -120,15 +151,49 @@ const Control = (() => {
     const year = dbResult.year || (track.album && track.album.release_date && track.album.release_date.slice(0, 4));
 
     // Update "now playing" panel
-    _setNowPlaying(track, isPlaying, genres, isCortina, tandaPos);
+    _setNowPlaying(track, isPlaying, genres, rawCortina, tandaPos);
 
-    // Queue preview for "Coming Up"
-    const next = queueData && queueData[0];
+    // Queue preview — Spotify returns { queue: [track, ...] }
+    const queue = (queueData && queueData.queue) || [];
+
+    let nextArtist = null, nextGenre = null, nextLabel = null;
+
+    if (_format === 'single') {
+      // Single tracks: show immediate next track
+      const nextTrack = queue[0];
+      nextArtist = nextTrack && nextTrack.artists && nextTrack.artists[0] && nextTrack.artists[0].name;
+      nextLabel = 'Next';
+    } else {
+      // Tandas: scan past cortinas to find first track of next tanda
+      // If currently in a cortina, next tanda starts at queue[0]
+      // If currently in a tanda, scan forward until after the next cortina
+      let scanFrom = rawCortina.isCortina ? 0 : null;
+      if (scanFrom === null) {
+        // Find the next cortina, then take the track after it
+        for (let i = 0; i < queue.length; i++) {
+          const q = queue[i];
+          const qGenres = [];  // we don't have artist genres for queue items without API call
+          const qCortina = Cortina.detectSync({ trackId: q.id, genres: qGenres });
+          if (qCortina.isCortina) { scanFrom = i + 1; break; }
+        }
+      }
+      if (scanFrom !== null && scanFrom < queue.length) {
+        const tandaFirstTrack = queue[scanFrom];
+        if (tandaFirstTrack) {
+          nextArtist = tandaFirstTrack.artists && tandaFirstTrack.artists[0] && tandaFirstTrack.artists[0].name;
+          const dbNext = TangoDB.lookupSync(tandaFirstTrack.name, nextArtist, tandaFirstTrack.id);
+          nextGenre = dbNext.type;
+          nextLabel = 'Next tanda';
+        }
+      }
+    }
 
     _pushState({
       mode: _mode,
+      format: _format,
       state: isPlaying ? 'playing' : 'paused',
-      isCortina: _danceOverride && _danceOverride !== 'none' ? false : isCortina,
+      isCortina: isCortina.isCortina,
+      cortinaLabel: isCortina.label,
       artist:    artistName,
       title:     track.name,
       genre,
@@ -136,8 +201,9 @@ const Control = (() => {
       albumArt:  track.album && track.album.images && track.album.images[0] && track.album.images[0].url,
       tandaPosition: tandaPos && tandaPos.position,
       tandaTotal:    tandaPos && tandaPos.total,
-      nextArtist: next && next.artists && next.artists[0] && next.artists[0].name,
-      nextGenre:  null,
+      nextArtist,
+      nextGenre,
+      nextLabel,
     });
   }
 

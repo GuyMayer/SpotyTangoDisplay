@@ -127,16 +127,17 @@ const Display = (() => {
     }
 
     const mode = data.mode || 'milonga';
+    const format = data.format || 'tandas-cortinas';
 
     if (data.state === 'idle' || !data.artist) {
       _transitionTo('idle', () => _renderIdle(data));
       return;
     }
 
-    if (data.isCortina) {
+    if (data.isCortina && format === 'tandas-cortinas') {
       _transitionTo('cortina', () => _renderCortina(data, mode));
     } else {
-      _transitionTo('track', () => _renderTrack(data, mode));
+      _transitionTo('track', () => _renderTrack(data, mode, format));
     }
   }
 
@@ -213,7 +214,8 @@ const Display = (() => {
     els.idleScreen.classList.remove('hidden');
   }
 
-  function _renderTrack(data, mode) {
+  function _renderTrack(data, mode, format) {
+    format = format || 'tandas-cortinas';
     const fields = _fieldsById(_profile.danceFields || []);
 
     // Artwork
@@ -234,7 +236,7 @@ const Display = (() => {
     _setTextField(els.trackYear,   fields, 'year',   data.year);
 
     // Tanda counter (milonga mode only)
-    if (mode === 'milonga' && _fieldVisible(fields, 'tanda') &&
+    if (mode === 'milonga' && format !== 'single' && _fieldVisible(fields, 'tanda') &&
         data.tandaPosition && data.tandaTotal) {
       const f = fields['tanda'] || {};
       els.tandaCounter.textContent = 'Track ' + data.tandaPosition + ' of ' + data.tandaTotal;
@@ -242,6 +244,18 @@ const Display = (() => {
       els.tandaCounter.style.display = 'block';
     } else {
       els.tandaCounter.style.display = 'none';
+    }
+
+    // Next track / next tanda preview on track screen
+    const cuFields = _fieldsById(_profile.comingUpFields || []);
+    if (data.nextArtist) {
+      const header = document.getElementById('coming-up-header');
+      if (header) header.textContent = data.nextLabel || 'Next';
+      _setTextField(els.comingUpArtist, cuFields, 'artist', data.nextArtist);
+      _setTextField(els.comingUpGenre,  cuFields, 'genre',  data.nextGenre);
+      els.comingUp.classList.remove('hidden');
+    } else {
+      els.comingUp.classList.add('hidden');
     }
 
     // Reorder DOM elements to match field order
@@ -271,8 +285,10 @@ const Display = (() => {
     _setTextField(els.cortinaArtist, fields, 'artist', data.artist);
     _setTextField(els.cortinaTitle,  fields, 'title',  data.title);
 
-    // "Coming Up" preview (milonga mode only)
-    if (mode === 'milonga' && data.nextArtist) {
+    // "Coming Up" preview
+    if (data.nextArtist) {
+      const header = document.getElementById('coming-up-header');
+      if (header) header.textContent = data.nextLabel || 'Next tanda';
       _setTextField(els.comingUpArtist, cuFields, 'artist', data.nextArtist);
       _setTextField(els.comingUpGenre,  cuFields, 'genre',  data.nextGenre);
       els.comingUp.classList.remove('hidden');
