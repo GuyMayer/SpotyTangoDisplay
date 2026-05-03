@@ -6,7 +6,7 @@ const Wizard = (() => {
   const STORAGE_STEP = 'spotd_wizard_step';   // resume step if closed mid-way
 
   let _currentStep = 1;
-  const TOTAL_STEPS = 7;
+  const TOTAL_STEPS = 8;
 
   // ── Step definitions ──────────────────────────────────────────────────────
 
@@ -15,9 +15,10 @@ const Wizard = (() => {
     2: { id: 'spotify',   title: 'Spotify'          },
     3: { id: 'pusher',    title: 'Display Relay'    },
     4: { id: 'audd',      title: 'Live Recognition' },
-    5: { id: 'branding',  title: 'Branding'         },
-    6: { id: 'cortina',   title: 'Cortina Rules'    },
-    7: { id: 'done',      title: 'Done!'            },
+    5: { id: 'lastfm',    title: 'Song Stories'     },
+    6: { id: 'branding',  title: 'Branding'         },
+    7: { id: 'cortina',   title: 'Cortina Rules'    },
+    8: { id: 'done',      title: 'Done!'            },
   };
 
   // ── Public entry points ───────────────────────────────────────────────────
@@ -137,8 +138,8 @@ const Wizard = (() => {
     if (nextBtn) nextBtn.classList.toggle('hidden', _currentStep === TOTAL_STEPS);
     if (doneBtn) doneBtn.classList.toggle('hidden', _currentStep !== TOTAL_STEPS);
     if (skipBtn) {
-      // Skip visible on optional steps 4 and 6
-      skipBtn.classList.toggle('hidden', ![4, 6].includes(_currentStep));
+      // Skip visible on optional steps 4, 5, and 7
+      skipBtn.classList.toggle('hidden', ![4, 5, 7].includes(_currentStep));
     }
   }
 
@@ -154,9 +155,10 @@ const Wizard = (() => {
       case 2: _renderSpotify(body);   break;
       case 3: _renderPusher(body);    break;
       case 4: _renderAudD(body);      break;
-      case 5: _renderBranding(body);  break;
-      case 6: _renderCortina(body);   break;
-      case 7: _renderDone(body);      break;
+      case 5: _renderLastFm(body);    break;
+      case 6: _renderBranding(body);  break;
+      case 7: _renderCortina(body);   break;
+      case 8: _renderDone(body);      break;
     }
   }
 
@@ -380,6 +382,71 @@ const Wizard = (() => {
     });
   }
 
+  function _renderLastFm(body) {
+    const existingKey = (typeof LastFm !== 'undefined' && LastFm.getKey()) || localStorage.getItem('spotd_lastfm_key') || '';
+    body.innerHTML = `
+      <h2>Song Stories <span class="wiz-optional">(optional)</span></h2>
+      <p>In <strong>Lesson mode</strong>, the right panel shows a short story about each song — its composer, era, and meaning. This uses <strong>Last.fm</strong> as the primary source, with Wikipedia as a fallback.</p>
+      <ol class="wiz-steps-list">
+        <li>Sign up free at <a href="https://www.last.fm/api/account/create" target="_blank" rel="noopener">last.fm/api</a></li>
+        <li>Create an API account — fills in instantly</li>
+        <li>Copy your <strong>API key</strong> and paste below</li>
+      </ol>
+      <p class="wiz-hint">Wikipedia fallback works without a key for well-known songs.</p>
+      <label class="wiz-label">Last.fm API Key
+        <input id="wiz-lastfm-key" class="wiz-input" type="text" placeholder="e.g. a1b2c3d4e5f6..." value="${_esc(existingKey)}" autocomplete="off">
+      </label>
+      <div id="wiz-lastfm-status" class="wiz-status"></div>
+      <button id="wiz-lastfm-test" class="wiz-btn secondary">Test (La Cumparsita by Rodríguez)</button>
+    `;
+
+    document.getElementById('wiz-lastfm-test').addEventListener('click', async () => {
+      const input   = document.getElementById('wiz-lastfm-key');
+      const statusEl = document.getElementById('wiz-lastfm-status');
+      const key = input.value.trim();
+      statusEl.textContent = 'Looking up…'; statusEl.className = 'wiz-status';
+      try {
+        const params = new URLSearchParams({
+          method: 'track.getInfo', api_key: key || 'nomatch',
+          artist: 'La Orquesta de Rodríguez', track: 'La Cumparsita',
+          format: 'json', autocorrect: '1',
+        });
+        const r = await fetch('https://ws.audioscrobbler.com/2.0/?' + params);
+        const d = await r.json();
+        if (d.error) {
+          // Key invalid but API reachable — try Wikipedia
+          const wiki = await fetch('https://en.wikipedia.org/api/rest_v1/page/summary/La_cumparsita');
+          const wd = await wiki.json();
+          if (wd.extract) {
+            statusEl.textContent = '✓ Key invalid but Wikipedia fallback works — songs will still show stories';
+            statusEl.className = 'wiz-status ok';
+          } else {
+            statusEl.textContent = '✗ ' + (d.message || 'Invalid API key');
+            statusEl.className = 'wiz-status error';
+          }
+        } else if (d.track && d.track.wiki && d.track.wiki.summary) {
+          statusEl.textContent = '✓ Last.fm connected — stories ready';
+          statusEl.className = 'wiz-status ok';
+        } else {
+          statusEl.textContent = '✓ Last.fm connected (no wiki for this track — Wikipedia will cover it)';
+          statusEl.className = 'wiz-status ok';
+        }
+      } catch (e) {
+        statusEl.textContent = '✗ ' + e.message;
+        statusEl.className = 'wiz-status error';
+      }
+    });
+  }
+
+  function _saveLastFmStep() {
+    const el = document.getElementById('wiz-lastfm-key');
+    if (!el) return;
+    const val = el.value.trim();
+    if (val) localStorage.setItem('spotd_lastfm_key', val);
+    else     localStorage.removeItem('spotd_lastfm_key');
+    if (typeof LastFm !== 'undefined') LastFm.setKey(val);
+  }
+
   function _renderBranding(body) {
     const profile = Profiles.getActive();
     const b = profile.branding || {};
@@ -516,11 +583,12 @@ const Wizard = (() => {
 
   function _saveStepData(step) {
     switch (step) {
-      case 2: _saveSpotifyStep();  break;
-      case 3: _savePusherStep();   break;
-      case 4: _saveAudDStep();     break;
-      case 5: _saveBrandingStep(); break;
-      case 6: _saveCortinaStep();  break;
+      case 2: _saveSpotifyStep();   break;
+      case 3: _savePusherStep();    break;
+      case 4: _saveAudDStep();      break;
+      case 5: _saveLastFmStep();    break;
+      case 6: _saveBrandingStep();  break;
+      case 7: _saveCortinaStep();   break;
     }
   }
 

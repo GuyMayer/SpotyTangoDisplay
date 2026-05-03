@@ -65,6 +65,7 @@ const Display = (() => {
   let _liveTimer  = null;      // setInterval handle
   const LIVE_INTERVAL_MS = 30000;
   let _orchestras = {};        // loaded from data/orchestras.json
+  let _lessonTrackKey = '';    // stale-guard for async song story fetch
 
   function _getOrchestraBio(name) {
     if (!name) return null;
@@ -275,7 +276,10 @@ const Display = (() => {
     // Text fields
     _setTextField(els.trackArtist, fields, 'artist', data.artist);
     _setTextField(els.trackTitle,  fields, 'title',  data.title);
-    _setTextField(els.trackGenre,  fields, 'genre',  data.genre);
+    const genreLabel = (data.genre && format !== 'single' && data.tandaPosition)
+      ? data.genre + ' #' + data.tandaPosition
+      : (data.genre || '');
+    _setTextField(els.trackGenre,  fields, 'genre',  genreLabel);
     _setTextField(els.trackYear,   fields, 'year',   data.year);
 
     // Tanda counter (milonga mode only)
@@ -539,11 +543,29 @@ const Display = (() => {
     els.lessonOrchSingers.textContent = singers && singers.length
       ? 'Singers: ' + singers.join(', ') : '';
 
-    // Song story (right panel)
-    els.lessonStory.textContent  = data.songStory  || '';
-    const themes = data.songThemes;
-    els.lessonThemes.textContent = themes && themes.length
-      ? 'Themes: ' + themes.join(', ') : '';
+    // Song story (right panel) — async: Last.fm → Wikipedia
+    els.lessonStory.textContent  = data.songStory || (data.title ? 'Loading…' : '');
+    els.lessonThemes.textContent = '';
+    if (data.title) {
+      const trackKey = (data.title + '|' + (data.artist || '')).toLowerCase();
+      _lessonTrackKey = trackKey;
+      if (typeof LastFm !== 'undefined') {
+        LastFm.fetchTrackInfo(data.title, data.artist).then(info => {
+          if (_lessonTrackKey !== trackKey) return; // stale
+          if (info && info.story) {
+            els.lessonStory.textContent = info.story;
+            els.lessonThemes.textContent = info.source === 'wikipedia' ? 'Source: Wikipedia' : 'Source: Last.fm';
+          } else {
+            els.lessonStory.textContent = '';
+            els.lessonThemes.textContent = '';
+          }
+        }).catch(() => { if (_lessonTrackKey === trackKey) els.lessonStory.textContent = ''; });
+      } else {
+        els.lessonStory.textContent  = data.songStory  || '';
+        const themes = data.songThemes;
+        els.lessonThemes.textContent = themes && themes.length ? 'Themes: ' + themes.join(', ') : '';
+      }
+    }
   }
 
   function _reorderChildren(parent, fieldsArray, elMap) {
