@@ -20,6 +20,17 @@ const Display = (() => {
     idleDjName:   $('idle-dj-name'),
 
     trackScreen:  $('track-screen'),
+    trackMain:    $('track-main'),
+    lessonLeft:        $('lesson-left'),
+    lessonRight:       $('lesson-right'),
+    lessonOrchName:    $('lesson-orch-name'),
+    lessonOrchNick:    $('lesson-orch-nickname'),
+    lessonOrchEra:     $('lesson-orch-era'),
+    lessonOrchStyle:   $('lesson-orch-style'),
+    lessonOrchChars:   $('lesson-orch-chars'),
+    lessonOrchSingers: $('lesson-orch-singers'),
+    lessonStory:       $('lesson-story'),
+    lessonThemes:      $('lesson-themes'),
     artworkWrap:  $('artwork-wrap'),
     artwork:      $('artwork'),
     trackArtist:  $('track-artist'),
@@ -44,6 +55,7 @@ const Display = (() => {
 
   let _profile = null;
   let _currentState = null; // 'idle' | 'track' | 'cortina'
+  let _lessonMode = false;
   let _transitionActive = false;
   let _localVideoActive = false;
   let _localVideos = [];
@@ -59,6 +71,7 @@ const Display = (() => {
     _profile = profileId ? Profiles.get(profileId) : null;
     if (!_profile) _profile = Profiles.getActive();
 
+    _lessonMode = (new URLSearchParams(window.location.search)).get('lesson') === '1';
     _applyProfileStyles();
     _showIdle();
     _connectPusher();
@@ -262,7 +275,7 @@ const Display = (() => {
     }
 
     // Reorder DOM elements to match field order
-    _reorderChildren(els.trackScreen, _profile.danceFields || [], {
+    _reorderChildren(els.trackMain, _profile.danceFields || [], {
       artist: els.trackArtist,
       title:  els.trackTitle,
       genre:  els.trackGenre,
@@ -270,6 +283,15 @@ const Display = (() => {
       artwork: els.artworkWrap,
       tanda:  els.tandaCounter,
     });
+
+    // Lesson mode
+    const lessonActive = _lessonMode || !!data.lessonMode || data.mode === 'lesson';
+    if (lessonActive) {
+      els.trackScreen.classList.add('lesson-mode');
+      _populateLessonPanels(data);
+    } else {
+      els.trackScreen.classList.remove('lesson-mode');
+    }
 
     els.trackScreen.classList.remove('hidden');
   }
@@ -472,6 +494,30 @@ const Display = (() => {
     if (field.size)   el.style.fontSize   = field.size + 'px';
     if (field.bold  != null) el.style.fontWeight  = field.bold  ? 'bold'   : 'normal';
     if (field.italic != null) el.style.fontStyle  = field.italic ? 'italic' : 'normal';
+  }
+
+  function _populateLessonPanels(data) {
+    // Orchestra bio (left panel)
+    const orch = data.orchestraBio || {};
+    els.lessonOrchName.textContent    = orch.name    || data.artist || '';
+    els.lessonOrchNick.textContent    = orch.nickname || '';
+    els.lessonOrchEra.textContent     = orch.era      || '';
+    els.lessonOrchStyle.textContent   = orch.style    || '';
+    els.lessonOrchChars.innerHTML = '';
+    (orch.characteristics || []).forEach(c => {
+      const li = document.createElement('li');
+      li.textContent = c;
+      els.lessonOrchChars.appendChild(li);
+    });
+    const singers = orch.notable_singers;
+    els.lessonOrchSingers.textContent = singers && singers.length
+      ? 'Singers: ' + singers.join(', ') : '';
+
+    // Song story (right panel)
+    els.lessonStory.textContent  = data.songStory  || '';
+    const themes = data.songThemes;
+    els.lessonThemes.textContent = themes && themes.length
+      ? 'Themes: ' + themes.join(', ') : '';
   }
 
   function _reorderChildren(parent, fieldsArray, elMap) {

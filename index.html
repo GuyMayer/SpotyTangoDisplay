@@ -78,6 +78,18 @@
           </div>
           <div id="np-badge" class="paused"></div>
         </div>
+        <div id="np-override-row" class="hidden">
+          <label for="np-type-override" id="np-override-label">Track type (DB override)</label>
+          <div id="np-override-inputs">
+            <input id="np-type-override" list="track-type-list" placeholder="e.g. Tango, Milonga, Vals…" autocomplete="off">
+            <button id="np-override-clear" class="btn small">Clear</button>
+          </div>
+          <datalist id="track-type-list">
+            <option value="Tango">
+            <option value="Milonga">
+            <option value="Vals">
+          </datalist>
+        </div>
       </div>
 
       <!-- DJ Message -->

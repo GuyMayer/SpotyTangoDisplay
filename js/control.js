@@ -5,6 +5,7 @@ const Control = (() => {
   let _mode = 'milonga';         // 'milonga' | 'lesson'
   let _format = 'tandas-cortinas'; // 'tandas-cortinas' | 'tandas-nocortinas' | 'single'
   let _lastTrack = null;
+  let _currentTrackId = null;    // track ID for per-track DB overrides
   let _pusherConnected = false;
   let _spotifyConnected = false;
   let _danceOverride = '';        // '' | 'Tango' | 'Milonga' | 'Vals' — DJ manual override
@@ -31,6 +32,7 @@ const Control = (() => {
     _bindDjMessage();
     _bindDanceOverride();
     _bindFormat();
+    _bindTrackOverride();
 
     _startSpotify();
     _startPusher();
@@ -109,7 +111,14 @@ const Control = (() => {
     if (!track) {
       _setNowPlaying(null, isPlaying);
       _pushState({ state: 'idle', mode: _mode });
+      _updateTrackOverrideRow(null);
       return;
+    }
+
+    // Update per-track override UI whenever track changes
+    if (track.id !== _currentTrackId) {
+      _currentTrackId = track.id;
+      _updateTrackOverrideRow(track.id);
     }
 
     // Cortina detection (sync from cache — full async detection happens in _pushCurrentState)

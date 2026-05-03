@@ -176,6 +176,16 @@ html, body {
 #coming-up-artist { font-size: 22px; color: #ccc; }
 #coming-up-genre  { font-size: 18px; }
 
+/* ── Track main wrapper (center col in lesson mode) ──────────── */
+
+#track-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
 /* ── Track-screen next preview ───────────────────────────────── */
 #track-next {
   position: absolute;
@@ -197,6 +207,76 @@ html, body {
   font-size: 18px;
   color: #999;
 }
+
+/* ── Lesson mode — 3-column grid ──────────────────────────────── */
+
+.lesson-panel { display: none; }
+
+#track-screen.lesson-mode {
+  display: grid;
+  grid-template-columns: 260px 1fr 260px;
+  grid-template-areas:
+    "left center right"
+    "next next   next";
+  align-items: center;
+  column-gap: 40px;
+  row-gap: 16px;
+  width: 100%;
+  height: 100%;
+}
+
+#track-screen.lesson-mode #lesson-left  { grid-area: left; }
+#track-screen.lesson-mode #track-main   { grid-area: center; }
+#track-screen.lesson-mode #lesson-right { grid-area: right; }
+#track-screen.lesson-mode #track-next   { grid-area: next; position: static; bottom: auto; }
+
+#track-screen.lesson-mode .lesson-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-self: center;
+  max-height: 72vh;
+  overflow-y: auto;
+}
+
+#lesson-left {
+  border-right: 1px solid rgba(255,255,255,0.08);
+  padding-right: 32px;
+  text-align: left;
+}
+
+#lesson-right {
+  border-left: 1px solid rgba(255,255,255,0.08);
+  padding-left: 32px;
+  text-align: left;
+}
+
+.lesson-label {
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: #444;
+  margin-bottom: 6px;
+}
+
+#lesson-orch-name     { font-size: 20px; font-weight: bold; color: #eee; }
+#lesson-orch-nickname { font-size: 13px; color: #c9a96e; font-style: italic; }
+#lesson-orch-era      { font-size: 12px; color: #666; }
+#lesson-orch-style    { font-size: 14px; color: #aaa; line-height: 1.6; margin-top: 6px; }
+
+#lesson-orch-chars {
+  list-style: none;
+  padding: 0;
+  margin-top: 2px;
+}
+
+#lesson-orch-chars li          { font-size: 12px; color: #777; padding: 2px 0; }
+#lesson-orch-chars li::before  { content: "·  "; color: #555; }
+
+#lesson-orch-singers { font-size: 12px; color: #666; margin-top: 4px; }
+
+#lesson-story  { font-size: 14px; color: #aaa; line-height: 1.7; }
+#lesson-themes { font-size: 12px; color: #666; margin-top: 6px; font-style: italic; }
 
 /* ── Connection status badge ──────────────────────────────────── */
 
