@@ -105,13 +105,12 @@ const Control = (() => {
       const hasKey = !!(localStorage.getItem('spotd_audd_key'));
       statusEl.textContent = hasKey ? '✓ Live mode active' : '⚠️ No AudD key — set it in Settings';
       statusEl.style.color = hasKey ? 'var(--accent)' : '#ff9800';
-      if (hintEl)     hintEl.style.display = hasKey ? 'none' : 'block';
-      if (settingsEl) settingsEl.classList.add('visible');
+      if (hintEl) hintEl.style.display = hasKey ? 'none' : 'block';
     } else {
       statusEl.textContent = '';
-      if (hintEl)     hintEl.style.display = 'none';
-      if (settingsEl) settingsEl.classList.remove('visible');
+      if (hintEl) hintEl.style.display = 'none';
     }
+    _updateLiveSettingsVisibility();
   }
 
   // ── Mode ──────────────────────────────────────────────────────────────────
@@ -146,6 +145,7 @@ const Control = (() => {
     _format = localStorage.getItem('spotd_format') || 'tandas-cortinas';
     const sel = document.getElementById('format-select');
     if (sel) sel.value = _format;
+    _updateLiveSettingsVisibility();
   }
 
   function _bindFormat() {
@@ -154,8 +154,18 @@ const Control = (() => {
     sel.addEventListener('change', () => {
       _format = sel.value;
       localStorage.setItem('spotd_format', _format);
+      _updateLiveSettingsVisibility();
       _pushCurrentState();
     });
+  }
+
+  function _updateLiveSettingsVisibility() {
+    const settingsEl = document.getElementById('live-settings');
+    if (!settingsEl) return;
+    // Only show live settings (rotation/tanda size) when in tanda format
+    const isTanda = _format !== 'single';
+    if (_source === 'live' && isTanda) settingsEl.classList.add('visible');
+    else settingsEl.classList.remove('visible');
   }
 
   // ── Spotify ───────────────────────────────────────────────────────────────
