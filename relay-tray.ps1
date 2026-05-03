@@ -71,12 +71,19 @@ $tray.Add_DoubleClick({ Start-Process "http://localhost:3456/" })
 # Balloon tip on startup
 $tray.ShowBalloonTip(3000, "SpotyTangoDisplay", "Relay running - double-click to open.", [System.Windows.Forms.ToolTipIcon]::Info)
 
-# Open browser after 1.5s
+# Open browser once relay is actually accepting connections (poll port 3456)
 $timer          = New-Object System.Windows.Forms.Timer
-$timer.Interval = 3000
+$timer.Interval = 500
 $timer.Add_Tick({
-    $timer.Stop()
-    Start-Process "http://localhost:3456/"
+    try {
+        $tcp = New-Object System.Net.Sockets.TcpClient
+        $tcp.Connect("127.0.0.1", 3456)
+        $tcp.Close()
+        $timer.Stop()
+        Start-Process "http://localhost:3456/"
+    } catch {
+        # not ready yet - try again next tick
+    }
 })
 $timer.Start()
 
