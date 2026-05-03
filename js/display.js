@@ -35,11 +35,16 @@ const Display = (() => {
     comingUp:      $('coming-up'),
     comingUpArtist:$('coming-up-artist'),
     comingUpGenre: $('coming-up-genre'),
+    djMessageOverlay: $('dj-message-overlay'),
+    djMessageText:    $('dj-message-text'),
   };
 
   let _profile = null;
   let _currentState = null; // 'idle' | 'track' | 'cortina'
   let _transitionActive = false;
+  let _localVideoActive = false;
+  let _localVideos = [];
+  let _localVideoIndex = 0;
 
   // ── Boot ──────────────────────────────────────────────────────────────────
 
@@ -54,6 +59,17 @@ const Display = (() => {
     _applyProfileStyles();
     _showIdle();
     _connectPusher();
+
+    const videoBtn   = document.getElementById('local-video-btn');
+    const videoInput = document.getElementById('local-video-input');
+    if (videoBtn && videoInput) {
+      videoBtn.addEventListener('click', () => videoInput.click());
+      videoInput.addEventListener('change', () => {
+        if (videoInput.files && videoInput.files.length) {
+          _startLocalVideoPlaylist(videoInput.files);
+        }
+      });
+    }
   }
 
   // ── Pusher connection ─────────────────────────────────────────────────────
@@ -99,6 +115,11 @@ const Display = (() => {
   // ── Message handler ───────────────────────────────────────────────────────
 
   function _handleMessage(data) {
+    if (data.type === 'dj-message') {
+      _showDjMessage(data.message || '');
+      return;
+    }
+
     // Apply profile from payload if provided (live profile switch)
     if (data.appearance) {
       _profile = _mergeAppearance(_profile, data.appearance);
@@ -272,6 +293,7 @@ const Display = (() => {
   }
 
   function _applyBackground() {
+    if (_localVideoActive) return;
     const bg = _profile.background || {};
     const layer = els.bgLayer;
     layer.innerHTML = '';
@@ -296,6 +318,7 @@ const Display = (() => {
   }
 
   function _applyCortinaBackground() {
+    if (_localVideoActive) return;
     const cbg = _profile.cortinaBackground || {};
     if (!cbg.enabled) { _applyBackground(); return; }
 
@@ -346,6 +369,54 @@ const Display = (() => {
     const t = _profile.transition || {};
     const dur = t.durationMs || 600;
     els.fadeOverlay.style.transitionDuration = (dur / 2) + 'ms';
+  }
+
+  // ── DJ message overlay ────────────────────────────────────────────────────
+
+  function _showDjMessage(text) {
+    if (!els.djMessageOverlay) return;
+    if (!text) {
+      els.djMessageOverlay.classList.add('hidden');
+      return;
+    }
+    els.djMessageText.textContent = text;
+    els.djMessageOverlay.classList.remove('hidden');
+  }
+
+  // ── Local video playlist ──────────────────────────────────────────────────
+
+  function _startLocalVideoPlaylist(files) {
+    _localVideos.forEach(url => URL.revokeObjectURL(url));
+    _localVideos = Array.from(files).map(f => URL.createObjectURL(f));
+    _localVideoIndex = 0;
+    _localVideoActive = true;
+    const btn = document.getElementById('local-video-btn');
+    if (btn) btn.textContent = '\uD83C\uDFAC ' + _localVideos.length;
+    _playNextLocalVideo();
+  }
+
+  function _playNextLocalVideo() {
+    if (!_localVideos.length) return;
+    const url = _localVideos[_localVideoIndex];
+    const layer = els.bgLayer;
+    layer.innerHTML = '';
+    layer.style.background = 'none';
+    const vid = document.createElement('video');
+    vid.src = url;
+    vid.autoplay = true;
+    vid.muted = true;
+    vid.playsInline = true;
+    vid.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+    vid.addEventListener('ended', () => {
+      _localVideoIndex = (_localVideoIndex + 1) % _localVideos.length;
+      _playNextLocalVideo();
+    });
+    vid.addEventListener('error', () => {
+      _localVideoIndex = (_localVideoIndex + 1) % _localVideos.length;
+      _playNextLocalVideo();
+    });
+    layer.appendChild(vid);
+    vid.play().catch(() => {});
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

@@ -24,6 +24,7 @@ const Control = (() => {
     _bindModeToggle();
     _bindProfileActions();
     _bindSettingsBtn();
+    _bindDjMessage();
 
     _startSpotify();
     _startPusher();
@@ -322,6 +323,28 @@ const Control = (() => {
     const btn = document.getElementById('btn-settings');
     if (!btn) return;
     btn.addEventListener('click', () => Wizard.show(1));
+  }
+
+  function _bindDjMessage() {
+    const sendBtn  = document.getElementById('dj-msg-send');
+    const clearBtn = document.getElementById('dj-msg-clear');
+    const input    = document.getElementById('dj-msg-input');
+    if (!sendBtn || !clearBtn || !input) return;
+
+    sendBtn.addEventListener('click', () => {
+      const msg = input.value.trim();
+      if (!msg) return;
+      PusherRelay.send({ type: 'dj-message', message: msg }).catch(err => {
+        console.warn('[control] DJ message send failed:', err.message);
+      });
+    });
+
+    clearBtn.addEventListener('click', () => {
+      input.value = '';
+      PusherRelay.send({ type: 'dj-message', message: '' }).catch(err => {
+        console.warn('[control] DJ message clear failed:', err.message);
+      });
+    });
   }
 
   // ── Util ──────────────────────────────────────────────────────────────────

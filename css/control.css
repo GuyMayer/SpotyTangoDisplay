@@ -262,6 +262,29 @@ main {
 .btn.danger  { border-color: var(--red); color: var(--red); }
 .btn.danger:hover { background: rgba(244,67,54,0.1); }
 
+/* ── DJ message card ───────────────────────────────────────────── */
+
+#dj-msg-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 5px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: none;
+  margin-bottom: 8px;
+}
+
+#dj-msg-input::placeholder { color: var(--text-muted); }
+#dj-msg-input:focus { outline: none; border-color: var(--accent); }
+
+#dj-msg-actions {
+  display: flex;
+  gap: 6px;
+}
+
 /* ── Wizard styles ─────────────────────────────────────────────── */
 
 #wizard-overlay {
@@ -465,5 +488,37 @@ main {
 }
 
 .wiz-logo-preview { margin-top: 8px; }
+
+/* Redirect URI highlight box */
+.wiz-redirect-box {
+  background: rgba(200, 169, 110, 0.08);
+  border: 1px solid rgba(200, 169, 110, 0.35);
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin-bottom: 18px;
+}
+
+.wiz-redirect-label {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.wiz-redirect-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wiz-redirect-uri {
+  flex: 1;
+  font-family: monospace;
+  font-size: 13px;
+  color: var(--text);
+  word-break: break-all;
+  background: none;
+}
 
 .hidden { display: none !important; }
