@@ -487,7 +487,7 @@ const Wizard = (() => {
             'HTTP-Referer': 'https://guymayer.github.io/SpotyTangoDisplay/',
           },
           body: JSON.stringify({
-            model: 'google/gemini-flash-1.5:free',
+            model: 'meta-llama/llama-3.3-70b-instruct:free',
             max_tokens: 10,
             messages: [{ role: 'user', content: 'Reply with the single word: ok' }],
           }),

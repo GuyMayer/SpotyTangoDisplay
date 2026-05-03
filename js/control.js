@@ -731,7 +731,7 @@ const Control = (() => {
           'HTTP-Referer': 'https://guymayer.github.io/SpotyTangoDisplay/',
         },
         body: JSON.stringify({
-          model: 'google/gemini-flash-1.5:free',
+          model: 'meta-llama/llama-3.3-70b-instruct:free',
           max_tokens: 200,
           messages: [{
             role: 'user',
