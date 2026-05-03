@@ -6,6 +6,7 @@ const Control = (() => {
   let _lastTrack = null;
   let _pusherConnected = false;
   let _spotifyConnected = false;
+  let _danceOverride = '';        // '' | 'Tango' | 'Milonga' | 'Vals' — DJ manual override
 
   // ── Boot ──────────────────────────────────────────────────────────────────
 
@@ -17,6 +18,7 @@ const Control = (() => {
     }
 
     _loadMode();
+    _loadDanceOverride();
     _renderProfileList();
     _renderRoomInfo();
     _renderStatusRow();
@@ -25,6 +27,7 @@ const Control = (() => {
     _bindProfileActions();
     _bindSettingsBtn();
     _bindDjMessage();
+    _bindDanceOverride();
 
     _startSpotify();
     _startPusher();
@@ -105,16 +108,16 @@ const Control = (() => {
     _pushState({
       mode: _mode,
       state: isPlaying ? 'playing' : 'paused',
-      isCortina,
+      isCortina: _danceOverride ? false : isCortina,
       artist:    track.artists && track.artists[0] && track.artists[0].name,
       title:     track.name,
-      genre:     genres && genres[0],
+      genre:     _danceOverride || (genres && genres[0]),
       year:      track.album && track.album.release_date && track.album.release_date.slice(0, 4),
       albumArt:  track.album && track.album.images && track.album.images[0] && track.album.images[0].url,
       tandaPosition: tandaPos && tandaPos.position,
       tandaTotal:    tandaPos && tandaPos.total,
       nextArtist: next && next.artists && next.artists[0] && next.artists[0].name,
-      nextGenre:  null, // genre for next track not cached yet — acceptable
+      nextGenre:  null,
     });
   }
 
@@ -315,6 +318,40 @@ const Control = (() => {
     if (!el) return;
     el.className = 'status-pill ' + (state || '');
     el.innerHTML = `<span class="status-dot"></span>${_esc(label)}`;
+  }
+
+  // ── Settings button ───────────────────────────────────────────────────────
+
+  // ── Dance type override ───────────────────────────────────────────────────
+
+  function _loadDanceOverride() {
+    _danceOverride = localStorage.getItem('spotd_dance_override') || '';
+    const sel = document.getElementById('dance-override-select');
+    if (sel) sel.value = _danceOverride;
+    _updateDanceOverrideBadge();
+  }
+
+  function _bindDanceOverride() {
+    const sel = document.getElementById('dance-override-select');
+    if (!sel) return;
+    sel.addEventListener('change', () => {
+      _danceOverride = sel.value;
+      localStorage.setItem('spotd_dance_override', _danceOverride);
+      _updateDanceOverrideBadge();
+      _pushCurrentState();
+    });
+  }
+
+  function _updateDanceOverrideBadge() {
+    const badge = document.getElementById('dance-override-badge');
+    if (!badge) return;
+    if (_danceOverride) {
+      badge.textContent = _danceOverride;
+      badge.className = 'dance-override-badge active';
+    } else {
+      badge.textContent = 'Auto';
+      badge.className = 'dance-override-badge';
+    }
   }
 
   // ── Settings button ───────────────────────────────────────────────────────
