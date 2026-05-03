@@ -15,7 +15,7 @@ Unicode True
 !define UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\SpotyTangoDisplay"
 
 Name          "${APP_NAME}"
-OutFile       "SpotyTangoDisplay-Setup.exe"
+OutFile       "${ROOT}\SpotyTangoDisplay-Setup.exe"
 InstallDir    "${INSTALL_DIR}"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
