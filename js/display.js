@@ -122,10 +122,15 @@ const Display = (() => {
     }
   }
 
-  // ── Pusher connection ─────────────────────────────────────────────────────
+  // ── Pusher / local connection ─────────────────────────────────────────────
 
   function _connectPusher() {
     const params = new URLSearchParams(window.location.search);
+
+    // Local relay mode: ?host=ip:port
+    const host = params.get('host');
+    if (host) { _connectLocal(decodeURIComponent(host)); return; }
+
     const roomCode = params.get('room');
 
     if (!roomCode) {
@@ -152,6 +157,26 @@ const Display = (() => {
         },
       });
     });
+  }
+
+  function _connectLocal(host) {
+    _setConnectionBadge('', 'Connecting…');
+    let _es = null;
+
+    function connect() {
+      _es = new EventSource('http://' + host + '/events');
+      _es.onopen    = () => _setConnectionBadge('connected', 'Live (local)');
+      _es.onmessage = e => {
+        try { _handleMessage(JSON.parse(e.data)); } catch (err) { /* ignore malformed */ }
+      };
+      _es.onerror   = () => {
+        _setConnectionBadge('disconnected', 'Reconnecting…');
+        _es.close();
+        setTimeout(connect, 3000);
+      };
+    }
+
+    connect();
   }
 
   function _loadPusherSdk(key, cluster, cb) {

@@ -603,6 +603,17 @@ main {
 .wiz-hint  { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 .wiz-code  { background: var(--surface2); padding: 2px 6px; border-radius: 3px; font-size: 12px; font-family: monospace; word-break: break-all; }
 
+pre.wiz-code { display: block; padding: 10px 14px; margin: 8px 0; white-space: pre-wrap; }
+
+.wiz-mode-row { display: flex; gap: 10px; margin-bottom: 18px; }
+.wiz-mode-btn {
+  flex: 1; padding: 12px; border-radius: 8px; border: 2px solid var(--surface2);
+  background: var(--surface1); cursor: pointer; text-align: left; color: var(--text);
+}
+.wiz-mode-btn strong { display: block; font-size: 14px; margin-bottom: 2px; }
+.wiz-mode-btn span   { font-size: 11px; color: var(--text-muted); }
+.wiz-mode-btn.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface1)); }
+
 .wiz-status       { min-height: 20px; font-size: 12px; margin: 6px 0; }
 .wiz-status.ok    { color: var(--green); }
 .wiz-status.error { color: var(--red); }

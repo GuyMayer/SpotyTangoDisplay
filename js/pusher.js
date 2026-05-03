@@ -44,6 +44,10 @@ const PusherRelay = (() => {
   function getDisplayUrl() {
     const base = window.location.origin +
       window.location.pathname.replace(/[^/]*$/, '');
+    if (getRelayMode() === 'local') {
+      const host = getLocalHost();
+      return base + 'display.html?host=' + encodeURIComponent(host);
+    }
     return base + 'display.html?room=' + getRoomCode();
   }
 
@@ -66,6 +70,7 @@ const PusherRelay = (() => {
   }
 
   function hasCredentials() {
+    if (getRelayMode() === 'local') return !!getLocalHost();
     const c = getCredentials();
     return !!(c.key && c.secret && c.appId);
   }
@@ -155,6 +160,21 @@ const PusherRelay = (() => {
   // -- Send via Pusher REST API (via CORS relay) -----------------------------
 
   async function send(payload) {
+    if (getRelayMode() === 'local') {
+      const host = getLocalHost();
+      if (!host) { console.warn('PusherRelay: local host not configured'); return false; }
+      try {
+        const res = await fetch('http://' + host + '/push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        return res.ok;
+      } catch (err) {
+        console.error('LocalRelay send error:', err);
+        return false;
+      }
+    }
     const { key, secret, appId, cluster } = getCredentials();
     if (!key || !secret || !appId) {
       console.warn('PusherRelay: credentials not configured');
@@ -274,6 +294,36 @@ const PusherRelay = (() => {
     }
   }
 
+  // -- Local relay mode -------------------------------------------------------
+
+  const LOCAL_MODE_KEY = 'spotd_relay_mode'; // 'cloud' | 'local'
+  const LOCAL_HOST_KEY = 'spotd_local_host'; // e.g. '192.168.1.50:3456'
+
+  function getRelayMode() {
+    return localStorage.getItem(LOCAL_MODE_KEY) || 'cloud';
+  }
+
+  function setRelayMode(mode) {
+    localStorage.setItem(LOCAL_MODE_KEY, mode);
+  }
+
+  function getLocalHost() {
+    return localStorage.getItem(LOCAL_HOST_KEY) || '';
+  }
+
+  function saveLocalHost(host) {
+    localStorage.setItem(LOCAL_HOST_KEY, host);
+  }
+
+  async function testLocal(host) {
+    try {
+      const res = await fetch('http://' + host + '/ping', { signal: AbortSignal.timeout(3000) });
+      return res.ok ? { ok: true } : { ok: false, error: 'HTTP ' + res.status };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  }
+
   // -- Public API ------------------------------------------------------------
 
   return {
@@ -287,5 +337,10 @@ const PusherRelay = (() => {
     saveCredentials,
     hasCredentials,
     test,
+    getRelayMode,
+    setRelayMode,
+    getLocalHost,
+    saveLocalHost,
+    testLocal,
   };
 })();

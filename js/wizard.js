@@ -269,36 +269,99 @@ const Wizard = (() => {
   }
 
   function _renderPusher(body) {
+    const mode  = PusherRelay.getRelayMode();
     const creds = PusherRelay.getCredentials();
+    const localHost = PusherRelay.getLocalHost();
 
     body.innerHTML = `
-      <h2>Display Relay (Pusher)</h2>
-      <p>Pusher is the free real-time bridge between your DJ app and the dancer screen. Each DJ uses their own free account.</p>
-      <ol class="wiz-steps-list">
-        <li>Sign up (free) at <a href="https://pusher.com" target="_blank" rel="noopener">pusher.com</a></li>
-        <li>Create a new <strong>Channels</strong> app</li>
-        <li>Go to <strong>App Keys</strong>, click <strong>Copy</strong>, then paste below</li>
-      </ol>
-      <label class="wiz-label">Paste App Keys block
-        <textarea id="wiz-pusher-paste" class="wiz-input" rows="4" placeholder='app_id = "12345"&#10;key = "abc..."&#10;secret = "xyz..."&#10;cluster = "eu"' style="font-family:monospace;font-size:12px;resize:vertical"></textarea>
-      </label>
-      <p class="wiz-hint" style="text-align:center;margin:4px 0 12px;color:var(--text-muted,#888);font-size:13px">— or enter values manually —</p>
-      <label class="wiz-label">App ID
-        <input id="wiz-pusher-app-id" class="wiz-input" type="text" placeholder="12345" value="${_esc(creds.appId||'')}">
-      </label>
-      <label class="wiz-label">Key
-        <input id="wiz-pusher-key" class="wiz-input" type="text" placeholder="abc123..." value="${_esc(creds.key||'')}">
-      </label>
-      <label class="wiz-label">Secret
-        <input id="wiz-pusher-secret" class="wiz-input" type="password" placeholder="••••••••" value="${_esc(creds.secret||'')}">
-      </label>
-      <label class="wiz-label">Cluster
-        <input id="wiz-pusher-cluster" class="wiz-input" type="text" placeholder="eu  (or us2, ap1, etc.)" value="${_esc(creds.cluster||'')}">
-      </label>
-      <div id="wiz-pusher-status" class="wiz-status"></div>
-      <button id="wiz-pusher-test" class="wiz-btn secondary">Test Connection</button>
+      <h2>Display Relay</h2>
+      <p>Choose how the DJ laptop sends track info to the dancer screen.</p>
+
+      <div class="wiz-mode-row">
+        <button id="wiz-relay-local" class="wiz-mode-btn${mode === 'local' ? ' active' : ''}">
+          <strong>Local Network</strong>
+          <span>Same WiFi or hotspot — no account needed</span>
+        </button>
+        <button id="wiz-relay-cloud" class="wiz-mode-btn${mode !== 'local' ? ' active' : ''}">
+          <strong>Cloud (Pusher)</strong>
+          <span>Works over the internet</span>
+        </button>
+      </div>
+
+      <div id="wiz-relay-local-form" style="display:${mode === 'local' ? 'block' : 'none'}">
+        <p>Run this on the DJ laptop <em>before</em> each event:</p>
+        <pre class="wiz-code">node relay.js</pre>
+        <p class="wiz-hint">The console will print your LAN IP. Enter it below.</p>
+        <label class="wiz-label">Relay address (IP:port)
+          <input id="wiz-local-host" class="wiz-input" type="text"
+            placeholder="192.168.1.x:3456  or  localhost:3456"
+            value="${_esc(localHost)}">
+        </label>
+        <div id="wiz-local-status" class="wiz-status"></div>
+        <button id="wiz-local-test" class="wiz-btn secondary">Test Connection</button>
+      </div>
+
+      <div id="wiz-relay-cloud-form" style="display:${mode !== 'local' ? 'block' : 'none'}">
+        <p>Pusher is a free real-time bridge. Each DJ uses their own free account.</p>
+        <ol class="wiz-steps-list">
+          <li>Sign up (free) at <a href="https://pusher.com" target="_blank" rel="noopener">pusher.com</a></li>
+          <li>Create a new <strong>Channels</strong> app</li>
+          <li>Go to <strong>App Keys</strong>, click <strong>Copy</strong>, then paste below</li>
+        </ol>
+        <label class="wiz-label">Paste App Keys block
+          <textarea id="wiz-pusher-paste" class="wiz-input" rows="4"
+            placeholder='app_id = "12345"&#10;key = "abc..."&#10;secret = "xyz..."&#10;cluster = "eu"'
+            style="font-family:monospace;font-size:12px;resize:vertical"></textarea>
+        </label>
+        <p class="wiz-hint" style="text-align:center;margin:4px 0 12px;color:var(--text-muted,#888);font-size:13px">— or enter values manually —</p>
+        <label class="wiz-label">App ID
+          <input id="wiz-pusher-app-id" class="wiz-input" type="text" placeholder="12345" value="${_esc(creds.appId||'')}">
+        </label>
+        <label class="wiz-label">Key
+          <input id="wiz-pusher-key" class="wiz-input" type="text" placeholder="abc123..." value="${_esc(creds.key||'')}">
+        </label>
+        <label class="wiz-label">Secret
+          <input id="wiz-pusher-secret" class="wiz-input" type="password" placeholder="••••••••" value="${_esc(creds.secret||'')}">
+        </label>
+        <label class="wiz-label">Cluster
+          <input id="wiz-pusher-cluster" class="wiz-input" type="text" placeholder="eu  (or us2, ap1, etc.)" value="${_esc(creds.cluster||'')}">
+        </label>
+        <div id="wiz-pusher-status" class="wiz-status"></div>
+        <button id="wiz-pusher-test" class="wiz-btn secondary">Test Connection</button>
+      </div>
     `;
 
+    // Mode toggle
+    document.getElementById('wiz-relay-local').addEventListener('click', () => {
+      document.getElementById('wiz-relay-local').classList.add('active');
+      document.getElementById('wiz-relay-cloud').classList.remove('active');
+      document.getElementById('wiz-relay-local-form').style.display = 'block';
+      document.getElementById('wiz-relay-cloud-form').style.display = 'none';
+    });
+    document.getElementById('wiz-relay-cloud').addEventListener('click', () => {
+      document.getElementById('wiz-relay-cloud').classList.add('active');
+      document.getElementById('wiz-relay-local').classList.remove('active');
+      document.getElementById('wiz-relay-cloud-form').style.display = 'block';
+      document.getElementById('wiz-relay-local-form').style.display = 'none';
+    });
+
+    // Local test
+    document.getElementById('wiz-local-test').addEventListener('click', async () => {
+      const hostVal = document.getElementById('wiz-local-host').value.trim();
+      const statusEl = document.getElementById('wiz-local-status');
+      if (!hostVal) { statusEl.textContent = '✗ Enter an address first'; statusEl.className = 'wiz-status error'; return; }
+      statusEl.textContent = 'Pinging…'; statusEl.className = 'wiz-status';
+      const result = await PusherRelay.testLocal(hostVal);
+      if (result.ok) {
+        statusEl.textContent = '✓ relay.js is running';
+        statusEl.className = 'wiz-status ok';
+      } else {
+        statusEl.textContent = '✗ Could not reach relay — is relay.js running? (' + result.error + ')';
+        statusEl.className = 'wiz-status error';
+      }
+    });
+
+    // Cloud paste + test
     document.getElementById('wiz-pusher-paste').addEventListener('input', (e) => {
       const parsed = _parsePusherBlock(e.target.value);
       if (parsed.appId) document.getElementById('wiz-pusher-app-id').value = parsed.appId;
@@ -785,18 +848,23 @@ const Wizard = (() => {
   }
 
   function _renderDone(body) {
-    const roomCode = PusherRelay.getRoomCode();
+    const roomCode  = PusherRelay.getRoomCode();
+    const isLocal   = PusherRelay.getRelayMode() === 'local';
     const displayUrl = PusherRelay.getDisplayUrl();
+    const localNote  = isLocal
+      ? '<p class="wiz-hint" style="color:#ff9800">Remember to run <code>node relay.js</code> on this laptop before each event.</p>'
+      : '';
 
     body.innerHTML = `
       <div class="wiz-center">
         <div class="wiz-hero-icon">🎉</div>
         <h2>You're all set!</h2>
-        <p>Open the dancer screen on any TV or monitor connected to the same room code.</p>
-        <div class="wiz-room-block">
+        <p>Open the dancer screen on any TV or monitor ${isLocal ? 'on the same WiFi' : 'connected to the same room code'}.</p>
+        ${localNote}
+        ${!isLocal ? `<div class="wiz-room-block">
           <div class="wiz-room-label">Room Code</div>
           <div class="wiz-room-code">${_esc(roomCode)}</div>
-        </div>
+        </div>` : ''}
         <div class="wiz-url-block">
           <span class="wiz-url">${_esc(displayUrl)}</span>
           <button id="wiz-copy-url" class="wiz-btn ghost small">Copy</button>
@@ -833,6 +901,13 @@ const Wizard = (() => {
   }
 
   function _validatePusher() {
+    const isLocal = document.getElementById('wiz-relay-local') &&
+                    document.getElementById('wiz-relay-local').classList.contains('active');
+    if (isLocal) {
+      const host = (document.getElementById('wiz-local-host') || {}).value || '';
+      if (!host.trim()) { _showError('wiz-local-status', 'Enter the relay address'); return false; }
+      return true;
+    }
     const creds = _readPusherFields();
     return creds !== null;
   }
@@ -891,8 +966,17 @@ const Wizard = (() => {
   }
 
   function _savePusherStep() {
-    const creds = _readPusherFields();
-    if (creds) PusherRelay.saveCredentials(creds);
+    const isLocal = document.getElementById('wiz-relay-local') &&
+                    document.getElementById('wiz-relay-local').classList.contains('active');
+    if (isLocal) {
+      PusherRelay.setRelayMode('local');
+      const host = ((document.getElementById('wiz-local-host') || {}).value || '').trim();
+      if (host) PusherRelay.saveLocalHost(host);
+    } else {
+      PusherRelay.setRelayMode('cloud');
+      const creds = _readPusherFields();
+      if (creds) PusherRelay.saveCredentials(creds);
+    }
   }
 
   function _saveBrandingStep() {

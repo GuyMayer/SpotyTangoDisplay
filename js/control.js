@@ -339,7 +339,14 @@ const Control = (() => {
 
   function _startPusher() {
     if (!PusherRelay.hasCredentials()) {
-      _setPusherStatus('warn', 'Pusher not configured');
+      _setPusherStatus('warn', 'Relay not configured');
+      return;
+    }
+
+    // Local relay mode — no SDK needed, just show status
+    if (PusherRelay.getRelayMode() === 'local') {
+      _pusherConnected = true;
+      _setPusherStatus('ok', 'Local relay active');
       return;
     }
 
@@ -504,7 +511,7 @@ const Control = (() => {
     _setSpotifyStatus(Spotify.isLoggedIn() ? 'ok' : 'error',
       Spotify.isLoggedIn() ? 'Spotify' : 'Spotify disconnected');
     _setPusherStatus(PusherRelay.hasCredentials() ? '' : 'warn',
-      PusherRelay.hasCredentials() ? 'Pusher…' : 'Pusher not set up');
+      PusherRelay.hasCredentials() ? 'Relay…' : 'Relay not set up');
   }
 
   function _setSpotifyStatus(state, label) {
@@ -942,6 +949,7 @@ const Control = (() => {
     'spotd_source', 'spotd_autogen_stories', 'spotd_live_tanda_size', 'spotd_live_tanda_style',
     'spotd_profiles', 'spotd_active_profile', 'spotd_story_overrides', 'spotd_track_types',
     'spotd_cortina_playlist', 'spotd_cortina_tracks', 'spotd_orchestra_cache',
+    'spotd_relay_mode', 'spotd_local_host',
   ];
 
   function _bindSettingsBackup() {
