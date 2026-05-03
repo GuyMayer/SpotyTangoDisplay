@@ -312,6 +312,7 @@ const Control = (() => {
       nextGenre,
       nextLabel,
       orchestraBio: _getOrchestraBio(artistName),
+      songStory: _storyCurrentText || undefined,
     });
   }
 
@@ -621,9 +622,11 @@ const Control = (() => {
 
   // ── Song Story card ───────────────────────────────────────────────────────
   let _storyCurrentTitle = '';
+  let _storyCurrentText  = '';  // latest resolved story — pushed with Pusher state
 
   function _updateStoryCard(title, artist) {
     _storyCurrentTitle = title || '';
+    _storyCurrentText  = '';
     const trackLabel = document.getElementById('story-card-track');
     const sourceLabel = document.getElementById('story-source-label');
     const textarea   = document.getElementById('story-edit-input');
@@ -637,9 +640,9 @@ const Control = (() => {
       return;
     }
 
-    if (trackLabel) trackLabel.textContent = '— ' + title;
+    if (trackLabel) trackLabel.textContent = '\u2014 ' + title;
     textarea.value = '';
-    textarea.placeholder = 'Loading…';
+    textarea.placeholder = 'Loading\u2026';
     if (sourceLabel) sourceLabel.textContent = '';
 
     // Check for existing override first (instant)
@@ -647,7 +650,9 @@ const Control = (() => {
       const override = LastFm.getStoryOverride(title);
       if (override) {
         textarea.value = override;
+        _storyCurrentText = override;
         if (sourceLabel) sourceLabel.textContent = 'Custom (saved by you)';
+        _pushCurrentState();
         return;
       }
     }
@@ -659,8 +664,10 @@ const Control = (() => {
         if (fetchTitle !== _storyCurrentTitle) return; // stale
         if (result && result.story) {
           textarea.value = result.story;
+          _storyCurrentText = result.story;
           const srcMap = { local: 'Curated local library', lastfm: 'Last.fm', wikipedia: 'Wikipedia', custom: 'Custom (saved by you)' };
           if (sourceLabel) sourceLabel.textContent = srcMap[result.source] || result.source;
+          _pushCurrentState();
         } else {
           textarea.value = '';
           textarea.placeholder = 'No story found. Type one to save it.';
@@ -690,9 +697,11 @@ const Control = (() => {
       if (typeof LastFm !== 'undefined') {
         LastFm.setStoryOverride(_storyCurrentTitle, story || null);
       }
+      _storyCurrentText = story;
       const sourceLabel = document.getElementById('story-source-label');
       if (sourceLabel) sourceLabel.textContent = story ? 'Custom (saved by you)' : '';
       if (!story) textarea.placeholder = 'No story saved.';
+      _pushCurrentState();
       // Visual confirmation flash
       const prev = saveBtn.textContent;
       saveBtn.textContent = 'Saved ✓';
@@ -785,10 +794,12 @@ const Control = (() => {
       const story = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
       if (story && story.trim()) {
         textarea.value = story.trim();
+        _storyCurrentText = story.trim();
         if (typeof LastFm !== 'undefined') {
           LastFm.setStoryOverride(title, story.trim());
         }
         if (sourceLabel) sourceLabel.textContent = 'AI-generated (saved)';
+        _pushCurrentState();
       } else {
         if (sourceLabel) sourceLabel.textContent = 'AI returned no content.';
       }

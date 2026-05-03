@@ -543,10 +543,13 @@ const Display = (() => {
     els.lessonOrchSingers.textContent = singers && singers.length
       ? 'Singers: ' + singers.join(', ') : '';
 
-    // Song story (right panel) — async: Last.fm → Wikipedia
+    // Song story (right panel) — use pushed story if available, else async fallback
     els.lessonStory.textContent  = data.songStory || (data.title ? 'Loading…' : '');
     els.lessonThemes.textContent = '';
-    if (data.title) {
+    if (data.songStory) {
+      // Story was pushed from control panel (includes DJ overrides + AI-generated)
+      els.lessonStory.textContent = data.songStory;
+    } else if (data.title) {
       const trackKey = (data.title + '|' + (data.artist || '')).toLowerCase();
       _lessonTrackKey = trackKey;
       if (typeof LastFm !== 'undefined') {
