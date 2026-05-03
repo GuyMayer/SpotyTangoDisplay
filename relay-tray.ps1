@@ -59,7 +59,7 @@ $tray.ShowBalloonTip(3000, "SpotyTangoDisplay", "Relay running - double-click to
 
 # Open browser after 1.5s
 $timer          = New-Object System.Windows.Forms.Timer
-$timer.Interval = 1500
+$timer.Interval = 3000
 $timer.Add_Tick({
     $timer.Stop()
     Start-Process "http://localhost:3456/"
