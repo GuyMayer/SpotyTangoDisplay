@@ -176,15 +176,15 @@ const PusherRelay = (() => {
     const url = 'https://api-' + cluster + '.pusher.com' + path + '?' + qs + '&auth_signature=' + authSig;
 
     try {
-      const res = await fetch(url, {
+      // Pusher REST API has no CORS headers — use no-cors to avoid preflight.
+      // Auth is in the URL query string so no custom headers are needed.
+      // Response is opaque (fire-and-forget); exceptions still surface failures.
+      await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
         body,
       });
-      if (!res.ok) {
-        console.error('PusherRelay send failed:', res.status, await res.text());
-        return false;
-      }
       return true;
     } catch (err) {
       console.error('PusherRelay send error:', err);
@@ -253,12 +253,15 @@ const PusherRelay = (() => {
     const sig = await _hmacSha256(secret, 'POST\n' + path + '\n' + qs);
     const url = 'https://api-' + cluster + '.pusher.com' + path + '?' + qs + '&auth_signature=' + sig;
     try {
-      const res = await fetch(url, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body,
+      // Use no-cors for same reason as send() — Pusher REST API has no CORS headers.
+      // We can't read the response status, so any non-exception is treated as success.
+      await fetch(url, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body,
       });
-      return (res.ok || res.status === 400)
-        ? { ok: true }
-        : { ok: false, error: 'HTTP ' + res.status + ': ' + await res.text() };
+      return { ok: true };
     } catch (err) {
       return { ok: false, error: err.message };
     }
