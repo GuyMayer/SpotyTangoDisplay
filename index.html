@@ -24,14 +24,6 @@
     <div>
 
       <!-- Status row -->
-      <div class="card">
-        <div class="card-title">Connection Status</div>
-        <div id="status-row">
-          <span id="status-spotify" class="status-pill"><span class="status-dot"></span>Spotify</span>
-          <span id="status-pusher"  class="status-pill"><span class="status-dot"></span>Pusher</span>
-        </div>
-      </div>
-
       <!-- Mode toggle -->
       <div class="card">
         <div class="card-title">Mode</div>
@@ -154,7 +146,7 @@
     <!-- ── Right column ─────────────────────────────────────────────── -->
     <div>
 
-      <!-- Display / room -->
+      <!-- Display / room + connection status combined -->
       <div class="card">
         <div class="card-title">Dancer Display</div>
         <div id="room-row">
@@ -165,6 +157,10 @@
           <span id="display-url"></span>
           <button id="copy-url-btn" class="btn small">Copy</button>
           <a id="display-link" href="#" target="_blank" rel="noopener" class="btn small">Open ↗</a>
+        </div>
+        <div id="status-row" style="margin-top:10px">
+          <span id="status-spotify" class="status-pill"><span class="status-dot"></span>Spotify</span>
+          <span id="status-pusher"  class="status-pill"><span class="status-dot"></span>Pusher</span>
         </div>
       </div>
 
