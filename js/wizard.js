@@ -386,12 +386,20 @@ const Wizard = (() => {
     const existingKey = (typeof LastFm !== 'undefined' && LastFm.getKey()) || localStorage.getItem('spotd_lastfm_key') || '';
     body.innerHTML = `
       <h2>Song Stories <span class="wiz-optional">(optional)</span></h2>
-      <p>In <strong>Lesson mode</strong>, the right panel shows a short story about each song — its composer, era, and meaning. This uses <strong>Last.fm</strong> as the primary source, with Wikipedia as a fallback.</p>
+      <p>In <strong>Lesson mode</strong>, the right panel shows a short story about each song. Uses Last.fm as the primary source, Wikipedia as fallback.</p>
       <ol class="wiz-steps-list">
-        <li>Sign up free at <a href="https://www.last.fm/api/account/create" target="_blank" rel="noopener">last.fm/api</a></li>
-        <li>Create an API account — fills in instantly</li>
-        <li>Copy your <strong>API key</strong> and paste below</li>
+        <li>Go to <a href="https://www.last.fm/api/account/create" target="_blank" rel="noopener">last.fm/api/account/create</a></li>
+        <li>Fill in the form — see hints below</li>
+        <li>Click <strong>Submit</strong> — you'll get your API key immediately</li>
+        <li>Paste it below</li>
       </ol>
+      <div class="wiz-hint" style="background:var(--surface2,#1e1e1e);border-radius:6px;padding:10px 14px;margin-bottom:14px;line-height:1.8">
+        <strong>What to fill in on Last.fm:</strong><br>
+        <span style="color:var(--text-muted,#888)">Application name:</span> TangoPassion Display<br>
+        <span style="color:var(--text-muted,#888)">Application description:</span> Displays track info at tango milongas<br>
+        <span style="color:var(--text-muted,#888)">Callback URL:</span> <em>leave blank</em><br>
+        <span style="color:var(--text-muted,#888)">Application homepage:</span> <em>leave blank</em>
+      </div>
       <p class="wiz-hint">Wikipedia fallback works without a key for well-known songs.</p>
       <label class="wiz-label">Last.fm API Key
         <input id="wiz-lastfm-key" class="wiz-input" type="text" placeholder="e.g. a1b2c3d4e5f6..." value="${_esc(existingKey)}" autocomplete="off">
