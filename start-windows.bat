@@ -51,11 +51,6 @@ exit /b 1
 
 :start_relay
 
-:: Start relay in this window, then open browser after 2s
-start "" /b cmd /c "timeout /t 2 /nobreak >nul && start http://localhost:3456/"
-node relay.js
-
-:: If relay exits (e.g. Ctrl+C), pause so window doesn't vanish instantly
-echo.
-echo Relay stopped. Press any key to close.
+:: Launch tray app (hidden window — relay runs in background, lives in system tray)
+powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File "%~dp0relay-tray.ps1"
 pause >nul

@@ -30,6 +30,7 @@ Section "Main"
 
   ; App files
   File "${ROOT}\relay.js"
+  File "${ROOT}\relay-tray.ps1"
   File "${ROOT}\index.html"
   File "${ROOT}\display.html"
   File "${ROOT}\download.html"
@@ -77,6 +78,7 @@ Section "Uninstall"
 
   Delete "$INSTDIR\Uninstall.exe"
   Delete "$INSTDIR\relay.js"
+  Delete "$INSTDIR\relay-tray.ps1"
   Delete "$INSTDIR\index.html"
   Delete "$INSTDIR\display.html"
   Delete "$INSTDIR\download.html"
