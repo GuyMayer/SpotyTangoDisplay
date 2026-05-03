@@ -12,7 +12,10 @@ const Control = (() => {
   let _spotifyConnected = false;
   let _danceOverride = '';        // '' | 'Tango' | 'Milonga' | 'Vals' — DJ manual override
   let _orchestras = {};          // loaded from data/orchestras.json
-  const _orchestraBioCache = {};  // AI-generated bios for unknown orchestras
+  const ORCHESTRA_CACHE_KEY = 'spotd_orchestra_cache';
+  let _orchestraBioCache = (() => {
+    try { return JSON.parse(localStorage.getItem(ORCHESTRA_CACHE_KEY) || '{}'); } catch { return {}; }
+  })();  // AI-generated bios, persisted to localStorage
 
   // ── Orchestra lookup ──────────────────────────────────────────────────────
 
@@ -794,6 +797,7 @@ const Control = (() => {
       const jsonStr = raw.replace(/^```[\s\S]*?\n/, '').replace(/```$/, '').trim();
       const bio = JSON.parse(jsonStr);
       _orchestraBioCache[key] = bio;
+      try { localStorage.setItem(ORCHESTRA_CACHE_KEY, JSON.stringify(_orchestraBioCache)); } catch (e) {}
       _pushState(Object.assign({}, basePayload, { orchestraBio: bio }));
     } catch (e) {
       _orchestraBioCache[key] = null;
@@ -937,7 +941,7 @@ const Control = (() => {
     'spotd_openrouter_key', 'spotd_mode', 'spotd_format', 'spotd_dance_override',
     'spotd_source', 'spotd_autogen_stories', 'spotd_live_tanda_size', 'spotd_live_tanda_style',
     'spotd_profiles', 'spotd_active_profile', 'spotd_story_overrides', 'spotd_track_types',
-    'spotd_cortina_playlist', 'spotd_cortina_tracks',
+    'spotd_cortina_playlist', 'spotd_cortina_tracks', 'spotd_orchestra_cache',
   ];
 
   function _bindSettingsBackup() {
@@ -975,6 +979,11 @@ const Control = (() => {
           EXPORT_KEYS.forEach(k => {
             if (k in data) { localStorage.setItem(k, data[k]); count++; }
           });
+          // Reload orchestra cache from restored data
+          try {
+            const raw = localStorage.getItem(ORCHESTRA_CACHE_KEY);
+            if (raw) _orchestraBioCache = JSON.parse(raw);
+          } catch (e) {}
           if (status) status.textContent = '✓ Loaded ' + count + ' settings. Reload the page to apply.';
         } catch (err) {
           if (status) status.textContent = '✗ Import failed: ' + err.message;
