@@ -38,7 +38,7 @@ jobs:
             --title "Latest Release" `
             --notes "Auto-built installer. Download and run to install SpotyTangoDisplay on Windows." `
             --latest `
-            installer\SpotyTangoDisplay-Setup.exe
+            SpotyTangoDisplay-Setup.exe
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: pwsh
