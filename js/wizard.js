@@ -74,6 +74,10 @@ const Wizard = (() => {
           <button id="wizard-btn-done"  class="wiz-btn primary hidden">Open Control Panel</button>
           <button id="wizard-btn-skip"  class="wiz-btn ghost">Skip</button>
         </div>
+        <div id="wizard-about">
+          <span>Sidekick SpotyMilonga Display</span>
+          <a href="https://buymeacoffee.com/guymayer" target="_blank" rel="noopener" id="wizard-coffee-btn">☕ Buy me a coffee</a>
+        </div>
       </div>
     `;
   }

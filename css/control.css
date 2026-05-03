@@ -760,4 +760,23 @@ main {
   min-height: 0;
 }
 
+#wizard-about {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px 10px;
+  border-top: 1px solid var(--border, #2a2a2a);
+  font-size: 11px;
+  color: var(--text-muted, #666);
+}
+
+#wizard-coffee-btn {
+  font-size: 11px;
+  color: var(--accent, #c8a96e);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+#wizard-coffee-btn:hover { text-decoration: underline; }
+
 .hidden { display: none !important; }
