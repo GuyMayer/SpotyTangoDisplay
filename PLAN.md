@@ -242,7 +242,12 @@ Runs on first visit. Resumes if closed mid-way. Re-runnable from Settings.
   - Toggled by DJ mode button (Milonga / Lesson)
   - Left panel: `data.orchestraBio.{name, nickname, era, style, characteristics[], notable_singers[]}`
   - Right panel: `data.songStory`, `data.songThemes[]`
-- [x] `js/audd.js` — AudD mic capture + recognition API client
+- [x] **AI orchestra bio fallback** — for orchestras not in data/orchestras.json, fetches bio from OpenRouter
+  - Cache persisted to `localStorage` key `spotd_orchestra_cache`
+  - Included in export/import (`EXPORT_KEYS`)
+  - Fields: `name, nickname, era, style, characteristics[], notable_singers[]`
+- [x] **Song story persistence** — `spotd_story_overrides` (custom + AI-saved stories) in `EXPORT_KEYS`
+- [x] **Settings export/import** — full backup JSON of all `EXPORT_KEYS` including bios and stories
 
 ### AudD Live Recognition — In Progress
 
