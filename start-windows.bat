@@ -51,6 +51,6 @@ exit /b 1
 
 :start_relay
 
-:: Launch tray app (hidden window — relay runs in background, lives in system tray)
-powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File "%~dp0relay-tray.ps1"
+:: Launch tray app detached so this window closes immediately
+start "" /b powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File "%~dp0relay-tray.ps1"
 pause >nul
