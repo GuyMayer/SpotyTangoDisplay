@@ -706,12 +706,12 @@ const Control = (() => {
   async function _generateAiStory(textarea, btn) {
     if (!_storyCurrentTitle) return;
 
-    // Get or prompt for OpenAI key
-    let apiKey = localStorage.getItem('spotd_openai_key') || '';
+    // Get or prompt for OpenRouter key
+    let apiKey = localStorage.getItem('spotd_openrouter_key') || '';
     if (!apiKey) {
-      apiKey = (prompt('Enter your OpenAI API key to generate stories.\nIt will be saved in your browser only.') || '').trim();
+      apiKey = (prompt('Enter your OpenRouter API key to generate stories.\nGet one free at openrouter.ai/keys — saved in your browser only.') || '').trim();
       if (!apiKey) return;
-      localStorage.setItem('spotd_openai_key', apiKey);
+      localStorage.setItem('spotd_openrouter_key', apiKey);
     }
 
     const title  = _storyCurrentTitle;
@@ -723,14 +723,15 @@ const Control = (() => {
     if (sourceLabel) sourceLabel.textContent = 'Generating…';
 
     try {
-      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': 'Bearer ' + apiKey,
           'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://guymayer.github.io/SpotyTangoDisplay/',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: 'google/gemini-flash-1.5:free',
           max_tokens: 200,
           messages: [{
             role: 'user',
@@ -742,7 +743,7 @@ const Control = (() => {
       });
 
       if (resp.status === 401) {
-        localStorage.removeItem('spotd_openai_key');
+        localStorage.removeItem('spotd_openrouter_key');
         if (sourceLabel) sourceLabel.textContent = 'Invalid API key — cleared.';
         return;
       }

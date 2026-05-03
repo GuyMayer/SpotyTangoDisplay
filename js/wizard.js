@@ -6,7 +6,7 @@ const Wizard = (() => {
   const STORAGE_STEP = 'spotd_wizard_step';   // resume step if closed mid-way
 
   let _currentStep = 1;
-  const TOTAL_STEPS = 8;
+  const TOTAL_STEPS = 9;
 
   // ── Step definitions ──────────────────────────────────────────────────────
 
@@ -16,9 +16,10 @@ const Wizard = (() => {
     3: { id: 'pusher',    title: 'Display Relay'    },
     4: { id: 'audd',      title: 'Live Recognition' },
     5: { id: 'lastfm',    title: 'Song Stories'     },
-    6: { id: 'branding',  title: 'Branding'         },
-    7: { id: 'cortina',   title: 'Cortina Rules'    },
-    8: { id: 'done',      title: 'Done!'            },
+    6: { id: 'ai',        title: 'AI Stories'       },
+    7: { id: 'branding',  title: 'Branding'         },
+    8: { id: 'cortina',   title: 'Cortina Rules'    },
+    9: { id: 'done',      title: 'Done!'            },
   };
 
   // ── Public entry points ───────────────────────────────────────────────────
@@ -138,8 +139,8 @@ const Wizard = (() => {
     if (nextBtn) nextBtn.classList.toggle('hidden', _currentStep === TOTAL_STEPS);
     if (doneBtn) doneBtn.classList.toggle('hidden', _currentStep !== TOTAL_STEPS);
     if (skipBtn) {
-      // Skip visible on optional steps 4, 5, and 7
-      skipBtn.classList.toggle('hidden', ![4, 5, 7].includes(_currentStep));
+      // Skip visible on optional steps 4, 5, 6, and 8
+      skipBtn.classList.toggle('hidden', ![4, 5, 6, 8].includes(_currentStep));
     }
   }
 
@@ -156,9 +157,10 @@ const Wizard = (() => {
       case 3: _renderPusher(body);    break;
       case 4: _renderAudD(body);      break;
       case 5: _renderLastFm(body);    break;
-      case 6: _renderBranding(body);  break;
-      case 7: _renderCortina(body);   break;
-      case 8: _renderDone(body);      break;
+      case 6: _renderAI(body);        break;
+      case 7: _renderBranding(body);  break;
+      case 8: _renderCortina(body);   break;
+      case 9: _renderDone(body);      break;
     }
   }
 
@@ -452,6 +454,68 @@ const Wizard = (() => {
     if (typeof LastFm !== 'undefined') LastFm.setKey(val);
   }
 
+  function _renderAI(body) {
+    const existingKey = localStorage.getItem('spotd_openrouter_key') || '';
+    body.innerHTML = `
+      <h2>AI Story Generator <span class="wiz-optional">(optional)</span></h2>
+      <p>Powers the <strong>✨ Generate</strong> button in the DJ control panel — writes a short backstory for the current song using AI.</p>
+      <ol class="wiz-steps-list">
+        <li>Sign up (free) at <a href="https://openrouter.ai" target="_blank" rel="noopener">openrouter.ai</a></li>
+        <li>Go to <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a> and create a key</li>
+        <li>Paste it below</li>
+      </ol>
+      <p class="wiz-hint">Free models available — no credit card required for basic use.</p>
+      <label class="wiz-label">OpenRouter API Key
+        <input id="wiz-openrouter-key" class="wiz-input" type="text" placeholder="sk-or-v1-..." value="${_esc(existingKey)}" autocomplete="off">
+      </label>
+      <div id="wiz-openrouter-status" class="wiz-status"></div>
+      <button id="wiz-openrouter-test" class="wiz-btn secondary">Test</button>
+    `;
+
+    document.getElementById('wiz-openrouter-test').addEventListener('click', async () => {
+      const input   = document.getElementById('wiz-openrouter-key');
+      const statusEl = document.getElementById('wiz-openrouter-status');
+      const key = input.value.trim();
+      if (!key) { statusEl.textContent = '\u2717 Enter a key first'; statusEl.className = 'wiz-status error'; return; }
+      statusEl.textContent = 'Testing\u2026'; statusEl.className = 'wiz-status';
+      try {
+        const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + key,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://guymayer.github.io/SpotyTangoDisplay/',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-flash-1.5:free',
+            max_tokens: 10,
+            messages: [{ role: 'user', content: 'Reply with the single word: ok' }],
+          }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+          const msg = (data.error && data.error.message) || ('HTTP ' + resp.status);
+          statusEl.textContent = '\u2717 ' + msg;
+          statusEl.className = 'wiz-status error';
+        } else {
+          statusEl.textContent = '\u2713 OpenRouter connected \u2014 AI stories ready';
+          statusEl.className = 'wiz-status ok';
+        }
+      } catch (e) {
+        statusEl.textContent = '\u2717 ' + e.message;
+        statusEl.className = 'wiz-status error';
+      }
+    });
+  }
+
+  function _saveAIStep() {
+    const el = document.getElementById('wiz-openrouter-key');
+    if (!el) return;
+    const val = el.value.trim();
+    if (val) localStorage.setItem('spotd_openrouter_key', val);
+    else     localStorage.removeItem('spotd_openrouter_key');
+  }
+
   function _renderBranding(body) {
     const profile = Profiles.getActive();
     const b = profile.branding || {};
@@ -592,8 +656,9 @@ const Wizard = (() => {
       case 3: _savePusherStep();    break;
       case 4: _saveAudDStep();      break;
       case 5: _saveLastFmStep();    break;
-      case 6: _saveBrandingStep();  break;
-      case 7: _saveCortinaStep();   break;
+      case 6: _saveAIStep();        break;
+      case 7: _saveBrandingStep();  break;
+      case 8: _saveCortinaStep();   break;
     }
   }
 
