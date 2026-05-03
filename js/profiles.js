@@ -62,9 +62,9 @@ const Profiles = (() => {
 
     // Dance track field config
     danceFields: [
+      { id: 'genre',  label: 'Genre',  visible: true, color: '#c8a96e', font: 'Georgia, serif', size: 42, bold: true,  italic: false },
       { id: 'artist', label: 'Artist', visible: true, color: '#ffffff', font: 'Georgia, serif', size: 42, bold: true,  italic: false },
       { id: 'title',  label: 'Title',  visible: true, color: '#dddddd', font: 'Georgia, serif', size: 30, bold: false, italic: true  },
-      { id: 'genre',  label: 'Genre',  visible: true, color: '#c8a96e', font: 'Georgia, serif', size: 22, bold: false, italic: false },
       { id: 'year',   label: 'Year',   visible: true, color: '#999999', font: 'Georgia, serif', size: 18, bold: false, italic: false },
       { id: 'artwork', label: 'Artwork', visible: true, size: 200 },
       { id: 'tanda',  label: 'Tanda',  visible: true, color: '#c8a96e', font: 'Georgia, serif', size: 16, bold: false, italic: false },
@@ -93,10 +93,33 @@ const Profiles = (() => {
     const stored = localStorage.getItem(STORAGE_LIST);
     if (!stored) return [_seedDefault()];
     try {
-      return JSON.parse(stored);
+      return _migrate(JSON.parse(stored));
     } catch {
       return [_seedDefault()];
     }
+  }
+
+  // Migrate existing saved profiles to current field layout
+  function _migrate(profiles) {
+    let dirty = false;
+    profiles.forEach(p => {
+      if (!p.danceFields) return;
+      const genre = p.danceFields.find(f => f.id === 'genre');
+      if (!genre) return;
+      if (genre.size !== 42 || !genre.bold) {
+        genre.size = 42;
+        genre.bold = true;
+        dirty = true;
+      }
+      const idx = p.danceFields.indexOf(genre);
+      if (idx !== 0) {
+        p.danceFields.splice(idx, 1);
+        p.danceFields.unshift(genre);
+        dirty = true;
+      }
+    });
+    if (dirty) _saveAll(profiles);
+    return profiles;
   }
 
   function _saveAll(profiles) {
