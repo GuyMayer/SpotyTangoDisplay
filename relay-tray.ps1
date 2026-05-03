@@ -3,7 +3,7 @@ Add-Type -AssemblyName System.Drawing
 
 Set-Location $PSScriptRoot
 
-# ── Start relay.js hidden ──────────────────────────────────────────────────
+# Start relay.js hidden
 $relay = Start-Process `
     -FilePath "node" `
     -ArgumentList "relay.js" `
@@ -11,23 +11,23 @@ $relay = Start-Process `
     -PassThru `
     -WindowStyle Hidden
 
-# ── Build tray icon (16×16 purple square with white "T") ───────────────────
+# Build a simple tray icon (16x16 purple square with white T)
 $bmp = New-Object System.Drawing.Bitmap 16, 16
 $g   = [System.Drawing.Graphics]::FromImage($bmp)
-$g.FillRectangle([System.Drawing.Brushes]::Purple,  0, 0, 16, 16)
+$g.FillRectangle([System.Drawing.Brushes]::Purple, 0, 0, 16, 16)
 $font = New-Object System.Drawing.Font("Arial", 9, [System.Drawing.FontStyle]::Bold)
 $g.DrawString("T", $font, [System.Drawing.Brushes]::White, 2, 1)
 $g.Dispose()
 $hIcon = $bmp.GetHicon()
 $icon  = [System.Drawing.Icon]::FromHandle($hIcon)
 
-# ── Tray icon ──────────────────────────────────────────────────────────────
-$tray          = New-Object System.Windows.Forms.NotifyIcon
-$tray.Icon     = $icon
-$tray.Text     = "SpotyTangoDisplay — running on port 3456"
-$tray.Visible  = $true
+# Tray icon
+$tray         = New-Object System.Windows.Forms.NotifyIcon
+$tray.Icon    = $icon
+$tray.Text    = "SpotyTangoDisplay - running on port 3456"
+$tray.Visible = $true
 
-# ── Context menu ───────────────────────────────────────────────────────────
+# Context menu
 $menu = New-Object System.Windows.Forms.ContextMenuStrip
 
 $openItem = New-Object System.Windows.Forms.ToolStripMenuItem
@@ -47,17 +47,15 @@ $exitItem.Add_Click({
     [System.Windows.Forms.Application]::Exit()
 })
 
-$menu.Items.Add($openItem)  | Out-Null
-$menu.Items.Add($sep)       | Out-Null
-$menu.Items.Add($exitItem)  | Out-Null
+$menu.Items.Add($openItem) | Out-Null
+$menu.Items.Add($sep)      | Out-Null
+$menu.Items.Add($exitItem) | Out-Null
 
 $tray.ContextMenuStrip = $menu
-
-# Double-click opens the control panel
 $tray.Add_DoubleClick({ Start-Process "http://localhost:3456/" })
 
-# Show balloon on start
-$tray.ShowBalloonTip(3000, "SpotyTangoDisplay", "Relay running — double-click to open.", [System.Windows.Forms.ToolTipIcon]::Info)
+# Balloon tip on startup
+$tray.ShowBalloonTip(3000, "SpotyTangoDisplay", "Relay running - double-click to open.", [System.Windows.Forms.ToolTipIcon]::Info)
 
 # Open browser after 1.5s
 $timer          = New-Object System.Windows.Forms.Timer
@@ -68,5 +66,5 @@ $timer.Add_Tick({
 })
 $timer.Start()
 
-# ── Run message loop (blocks until Exit is clicked) ────────────────────────
+# Run message loop
 [System.Windows.Forms.Application]::Run()
