@@ -1,6 +1,19 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
+# Singleton guard - only one instance allowed
+$mutexName = "Global\SpotyTangoDisplayRelay"
+$mutex = New-Object System.Threading.Mutex($false, $mutexName)
+if (-not $mutex.WaitOne(0)) {
+    [System.Windows.Forms.MessageBox]::Show(
+        "SpotyTangoDisplay is already running.`nCheck the system tray.",
+        "Already Running",
+        [System.Windows.Forms.MessageBoxButtons]::OK,
+        [System.Windows.Forms.MessageBoxIcon]::Information
+    ) | Out-Null
+    exit
+}
+
 Set-Location $PSScriptRoot
 
 # Start relay.js hidden
@@ -44,6 +57,7 @@ $exitItem.Add_Click({
     if ($relay -and -not $relay.HasExited) {
         Stop-Process -Id $relay.Id -Force -ErrorAction SilentlyContinue
     }
+    $mutex.ReleaseMutex()
     [System.Windows.Forms.Application]::Exit()
 })
 
