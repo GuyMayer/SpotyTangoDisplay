@@ -327,6 +327,7 @@ main {
 
 /* ── Dance type override ───────────────────────────────────────── */
 
+#format-select,
 #dance-override-select {
   width: 100%;
   background: var(--surface2);
@@ -338,6 +339,7 @@ main {
   cursor: pointer;
 }
 
+#format-select:focus,
 #dance-override-select:focus { outline: none; border-color: var(--accent); }
 
 .dance-override-badge {
