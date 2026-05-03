@@ -753,9 +753,9 @@ const Control = (() => {
         },
         body: JSON.stringify({
           models: [
-            'nousresearch/hermes-3-llama-3.1-405b:free',
             'openai/gpt-oss-20b:free',
-            'qwen/qwen3-coder:free',
+            'openai/gpt-oss-120b:free',
+            'nousresearch/hermes-3-llama-3.1-405b:free',
           ],
           route: 'fallback',
           max_tokens: 200,
