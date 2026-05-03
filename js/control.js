@@ -746,8 +746,11 @@ const Control = (() => {
   const _translationCache = {};  // title → translated string or null
 
   function _looksSpanish(title) {
-    // Accented vowels, ñ, ¿, ¡ common in Spanish tango titles
-    return /[áéíóúüñ¿¡]/i.test(title);
+    if (/[áéíóúüñ¿¡]/i.test(title)) return true;
+    // Also catch plain-ASCII Spanish tango titles via common Spanish words
+    const words = title.toLowerCase().split(/[\s\-]+/);
+    const spanishWords = new Set(['el','la','los','las','un','una','de','del','en','y','se','te','me','mi','tu','su','que','con','por','para','al','lo','no','si','mas','ni']);
+    return words.some(w => spanishWords.has(w));
   }
 
   async function _maybeTranslateTitle(title, basePayload) {
