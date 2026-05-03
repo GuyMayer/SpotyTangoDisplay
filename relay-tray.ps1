@@ -122,9 +122,15 @@ $exitItem = New-Object System.Windows.Forms.ToolStripMenuItem
 $exitItem.Text = "Exit"
 $exitItem.Add_Click({
     $tray.Visible = $false
+    # Kill cmd.exe wrapper + any node relay.js processes
     if ($relay -and -not $relay.HasExited) {
         Stop-Process -Id $relay.Id -Force -ErrorAction SilentlyContinue
     }
+    try {
+        Get-CimInstance Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyContinue |
+            Where-Object { $_.CommandLine -like '*relay.js*' } |
+            ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+    } catch {}
     $mutex.ReleaseMutex()
     [System.Windows.Forms.Application]::Exit()
 })
