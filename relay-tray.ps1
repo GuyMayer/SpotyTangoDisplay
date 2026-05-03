@@ -67,26 +67,53 @@ $sep = New-Object System.Windows.Forms.ToolStripSeparator
 $debugItem = New-Object System.Windows.Forms.ToolStripMenuItem
 $debugItem.Text = "Debug Info"
 $debugItem.Add_Click({
-    $pid_  = if ($relay -and -not $relay.HasExited) { $relay.Id } else { "stopped" }
-    $portOk = $false
-    $httpStatus = "n/a"
-    try {
-        $t = New-Object System.Net.Sockets.TcpClient; $t.Connect("127.0.0.1", 3456); $t.Close(); $portOk = $true
-    } catch {}
-    if ($portOk) {
+    # Collect everything off the UI thread so the menu doesn't freeze
+    $pid_      = if ($relay -and -not $relay.HasExited) { $relay.Id } else { "stopped" }
+    $scriptRoot = $PSScriptRoot
+    $logPath    = "$env:TEMP\SpotyTangoDisplay-relay.log"
+
+    $job = Start-Job -ScriptBlock {
+        param($scriptRoot, $logPath)
+        $portOk    = $false
+        $httpStatus = "n/a"
         try {
-            $r = Invoke-WebRequest -Uri "http://localhost:3456/" -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
-            $httpStatus = "$($r.StatusCode) ($($r.StatusDescription)) - $($r.RawContent.Length) bytes"
-        } catch {
-            $httpStatus = "ERROR: $($_.Exception.Message)"
+            $t = New-Object System.Net.Sockets.TcpClient
+            $t.Connect("127.0.0.1", 3456); $t.Close(); $portOk = $true
+        } catch {}
+        if ($portOk) {
+            try {
+                $r = Invoke-WebRequest -Uri "http://localhost:3456/" -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
+                $httpStatus = "$($r.StatusCode) - $($r.RawContent.Length) bytes"
+            } catch { $httpStatus = "ERROR: $($_.Exception.Message)" }
         }
-    }
-    $ver   = try { (Get-Content "$PSScriptRoot\version.txt" -ErrorAction Stop).Trim() } catch { "unknown" }
-    $nodeV = try { (& node --version 2>$null).Trim() } catch { "not found" }
-    $logOut = try { (Get-Content "$env:TEMP\SpotyTangoDisplay-relay.log" -Tail 30 -ErrorAction Stop) -join "`n" } catch { "(no log)" }
-    $logSection = "`n--- relay log (stdout+stderr) ---`n$logOut"
-    $msg   = "relay.js PID : $pid_`nPort 3456   : $(if ($portOk) { 'open' } else { 'closed' })`nHTTP GET /  : $httpStatus`nVersion     : $ver`nNode        : $nodeV`nScriptRoot  : $PSScriptRoot$logSection"
-    [System.Windows.Forms.MessageBox]::Show($msg, "SpotyTangoDisplay Debug", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information) | Out-Null
+        $ver   = try { (Get-Content "$scriptRoot\version.txt" -ErrorAction Stop).Trim() } catch { "unknown" }
+        $nodeV = try { (& node --version 2>$null).Trim() } catch { "not found" }
+        $log   = try { (Get-Content $logPath -Tail 30 -ErrorAction Stop) -join "`n" } catch { "(no log)" }
+        [pscustomobject]@{
+            portOk=$portOk; httpStatus=$httpStatus; ver=$ver; nodeV=$nodeV; log=$log
+        }
+    } -ArgumentList $scriptRoot, $logPath
+
+    # Poll on a timer; show MessageBox on completion (stays off UI thread until ready)
+    $debugTimer = New-Object System.Windows.Forms.Timer
+    $debugTimer.Interval = 200
+    $debugTimer.Add_Tick({
+        if ($job.State -eq "Completed") {
+            $debugTimer.Stop(); $debugTimer.Dispose()
+            $d = Receive-Job $job; Remove-Job $job
+            $port = if ($d.portOk) { "open" } else { "closed" }
+            $msg  = "relay.js PID : $pid_`nPort 3456   : $port`nHTTP GET /  : $($d.httpStatus)`nVersion     : $($d.ver)`nNode        : $($d.nodeV)`nScriptRoot  : $scriptRoot`n`n--- relay log ---`n$($d.log)"
+            [System.Windows.Forms.MessageBox]::Show($msg, "SpotyTangoDisplay Debug", `
+                [System.Windows.Forms.MessageBoxButtons]::OK, `
+                [System.Windows.Forms.MessageBoxIcon]::Information) | Out-Null
+        } elseif ($job.State -eq "Failed") {
+            $debugTimer.Stop(); $debugTimer.Dispose(); Remove-Job $job -Force
+            [System.Windows.Forms.MessageBox]::Show("Debug collection failed.", "Debug", `
+                [System.Windows.Forms.MessageBoxButtons]::OK, `
+                [System.Windows.Forms.MessageBoxIcon]::Error) | Out-Null
+        }
+    })
+    $debugTimer.Start()
 })
 
 $sep2 = New-Object System.Windows.Forms.ToolStripSeparator
