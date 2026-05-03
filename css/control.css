@@ -401,6 +401,53 @@ main {
   gap: 6px;
 }
 
+/* ── Song Story card ───────────────────────────────────────────── */
+
+#story-edit-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 5px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+}
+
+#story-edit-input::placeholder { color: var(--text-muted); }
+#story-edit-input:focus { outline: none; border-color: var(--accent); }
+
+#story-edit-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+#story-ai-btn {
+  margin-left: auto;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+#story-ai-btn:hover { background: rgba(198,160,100,0.12); }
+#story-ai-btn:disabled { opacity: .45; cursor: default; }
+
+#story-source-label {
+  font-size: .75em;
+  opacity: .55;
+  margin-bottom: .4em;
+  min-height: 1em;
+}
+
+#story-card-track {
+  font-weight: 400;
+  opacity: .6;
+  font-size: .85em;
+}
+
 /* ── Wizard styles ─────────────────────────────────────────────── */
 
 #wizard-overlay {

@@ -673,6 +673,7 @@ const Control = (() => {
   function _bindStoryCard() {
     const saveBtn  = document.getElementById('story-save-btn');
     const clearBtn = document.getElementById('story-clear-btn');
+    const aiBtn    = document.getElementById('story-ai-btn');
     const textarea = document.getElementById('story-edit-input');
     if (!saveBtn || !textarea) return;
 
@@ -693,9 +694,75 @@ const Control = (() => {
         if (typeof LastFm !== 'undefined') {
           LastFm.setStoryOverride(_storyCurrentTitle, null);
         }
-        // Re-fetch underlying story
         _updateStoryCard(_storyCurrentTitle, '');
       });
+    }
+
+    if (aiBtn) {
+      aiBtn.addEventListener('click', () => _generateAiStory(textarea, aiBtn));
+    }
+  }
+
+  async function _generateAiStory(textarea, btn) {
+    if (!_storyCurrentTitle) return;
+
+    // Get or prompt for OpenAI key
+    let apiKey = localStorage.getItem('spotd_openai_key') || '';
+    if (!apiKey) {
+      apiKey = (prompt('Enter your OpenAI API key to generate stories.\nIt will be saved in your browser only.') || '').trim();
+      if (!apiKey) return;
+      localStorage.setItem('spotd_openai_key', apiKey);
+    }
+
+    const title  = _storyCurrentTitle;
+    const artist = document.getElementById('np-artist') && document.getElementById('np-artist').textContent || '';
+
+    btn.disabled = true;
+    btn.textContent = '✨ …';
+    const sourceLabel = document.getElementById('story-source-label');
+    if (sourceLabel) sourceLabel.textContent = 'Generating…';
+
+    try {
+      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          max_tokens: 200,
+          messages: [{
+            role: 'user',
+            content: 'Write a short, engaging story/backstory (2–4 sentences) about the tango song "' + title + '"' +
+              (artist ? ' by ' + artist : '') +
+              '. Focus on the history, emotion, or cultural context. Plain text only, no markdown.',
+          }],
+        }),
+      });
+
+      if (resp.status === 401) {
+        localStorage.removeItem('spotd_openai_key');
+        if (sourceLabel) sourceLabel.textContent = 'Invalid API key — cleared.';
+        return;
+      }
+
+      const data = await resp.json();
+      const story = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      if (story && story.trim()) {
+        textarea.value = story.trim();
+        if (typeof LastFm !== 'undefined') {
+          LastFm.setStoryOverride(title, story.trim());
+        }
+        if (sourceLabel) sourceLabel.textContent = 'AI-generated (saved)';
+      } else {
+        if (sourceLabel) sourceLabel.textContent = 'AI returned no content.';
+      }
+    } catch (err) {
+      if (sourceLabel) sourceLabel.textContent = 'Error: ' + err.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '✨ Generate';
     }
   }
 

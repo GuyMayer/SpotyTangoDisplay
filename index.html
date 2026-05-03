@@ -135,12 +135,13 @@
 
       <!-- Song Story -->
       <div class="card" id="story-card">
-        <div class="card-title">Song Story <span id="story-card-track" style="font-weight:400;opacity:.6;font-size:.85em"></span></div>
-        <div id="story-source-label" style="font-size:.75em;opacity:.55;margin-bottom:.4em"></div>
-        <textarea id="story-edit-input" rows="5" placeholder="No story found. Type one here to save it for this song…"></textarea>
-        <div id="story-edit-actions" style="display:flex;gap:.5em;margin-top:.4em">
+        <div class="card-title">Song Story <span id="story-card-track"></span></div>
+        <div id="story-source-label"></div>
+        <textarea id="story-edit-input" rows="5" placeholder="No song playing."></textarea>
+        <div id="story-edit-actions">
           <button id="story-save-btn" class="btn">Save</button>
           <button id="story-clear-btn" class="btn">Clear Custom</button>
+          <button id="story-ai-btn" class="btn" title="Generate story with AI">✨ Generate</button>
         </div>
       </div>
 
