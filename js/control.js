@@ -454,6 +454,47 @@ const Control = (() => {
     }
   }
 
+  // ── Per-track DB type override ────────────────────────────────────────────
+
+  function _bindTrackOverride() {
+    const input   = document.getElementById('np-type-override');
+    const clearBtn = document.getElementById('np-override-clear');
+    if (!input) return;
+
+    input.addEventListener('change', () => {
+      const val = input.value.trim();
+      if (_currentTrackId) {
+        TangoDB.setOverride(_currentTrackId, val || null);
+        _pushCurrentState();
+      }
+    });
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        if (_currentTrackId) {
+          TangoDB.setOverride(_currentTrackId, null);
+          input.value = '';
+          _pushCurrentState();
+        }
+      });
+    }
+  }
+
+  function _updateTrackOverrideRow(trackId) {
+    const row   = document.getElementById('np-override-row');
+    const input = document.getElementById('np-type-override');
+    if (!row || !input) return;
+
+    if (!trackId) {
+      row.classList.add('hidden');
+      return;
+    }
+
+    const existing = TangoDB.getOverride(trackId);
+    input.value = existing || '';
+    row.classList.remove('hidden');
+  }
+
   // ── Settings button ───────────────────────────────────────────────────────
 
   function _bindSettingsBtn() {

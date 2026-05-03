@@ -223,3 +223,52 @@ Runs on first visit. Resumes if closed mid-way. Re-runnable from Settings.
 
 - [ ] White-label / business model (build is white-label-ready; model TBD)
 - [ ] Whether to open-source or keep private long-term
+
+---
+
+## Feature Status (as of 2026-05-03)
+
+### Done
+
+- [x] Spotify polling + PKCE auth
+- [x] Pusher relay (send/receive)
+- [x] Cortina + tanda detection
+- [x] Display screen renderer
+- [x] Profiles + appearance editor
+- [x] Wizard (6 steps)
+- [x] Next track / tanda preview on display
+- [x] Dance type: "From database (el-recodo)" option
+- [x] **Lesson mode** — 3-column layout (orchestra bio | track info | song story)
+  - Toggled by DJ mode button (Milonga / Lesson)
+  - Left panel: `data.orchestraBio.{name, nickname, era, style, characteristics[], notable_singers[]}`
+  - Right panel: `data.songStory`, `data.songThemes[]`
+- [x] `js/audd.js` — AudD mic capture + recognition API client
+
+### AudD Live Recognition — In Progress
+
+Display screen listens via mic, identifies tracks without Spotify. Files remaining:
+
+| File | Change |
+| --- | --- |
+| `display.html` | `<script src="js/audd.js">` + `<div id="live-indicator">` |
+| `css/display.css` | `#live-indicator` pulsing red dot, fixed bottom-left |
+| `display.js` | `_source` var, 30s poll loop, synthesize payload → `_handleMessage()` |
+| `index.html` | "Input Source" card — `[Spotify]` `[Live (mic)]` toggle |
+| `control.js` | `_source` localStorage `spotd_source`, push via Pusher on toggle |
+| `css/control.css` | `#source-toggle` styles (reuse `.mode-btn` pattern) |
+| `wizard.js` | New AudD step (step 4, bump branding→5, cortina→6, done→7). API key + 3s test. Optional. |
+
+Notes:
+- `localStorage` is same-origin — key saved in wizard on index.html, read by display.html ✅
+- Poll every 30s. AudD free = 300 req/month ≈ 2.5h milonga. Warn user in wizard.
+- On match: synthesize data object, call `_handleMessage()` directly (no Pusher round-trip).
+
+### Lesson Mode Data Pipeline — Upcoming
+
+1. **tango-db.json enrichment** — Python script adds singer `s` field from elrecodo.csv (~8,000 of 20,259 entries)
+2. **data/orchestras.json** — ~25 orchestras, year-ranged periods: `[{from, to, style, mood, characteristics[], notable_singers[]}]`
+   - Lookup: `getOrchestra(name, year)` → matching period, fallback to most iconic
+   - Cover: Canaro, D'Arienzo, Firpo, Fresedo, Lomuto, Pugliese, De Angelis, Troilo, Calò, Varela, Di Sarli, Donato, De Caro, Biagi, Tanturi, D'Agostino, Piazzolla, Basso, Sassone, Pontier, Rodriguez, Federico, Demare, Laurenz, Salgán
+3. **data/tango-stories.json** — offline Node.js AI build script, ~500 tracks, `{story, themes[]}`
+4. **tango-db.js** — `lookup()` returns `{type, year, source, singer}`
+5. **control.js** — `_pushState` adds `singer`, `orchestraBio`, `songStory`, `songThemes`
