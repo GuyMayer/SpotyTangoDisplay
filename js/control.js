@@ -314,6 +314,9 @@ const Control = (() => {
       nextLabel,
       orchestraBio: _getOrchestraBio(artistName),
       songStory: _storyCurrentText || undefined,
+      appearance: {
+        lessonPanels: (Profiles.getActive().lessonPanels) || { showOrchestra: true, showStory: true },
+      },
     };
     _pushState(payload);
 

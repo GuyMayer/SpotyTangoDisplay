@@ -85,6 +85,19 @@ const Profiles = (() => {
 
     // Accent / highlight color (used for tanda counter, borders)
     accentColor: '#c8a96e',
+
+    // Lesson mode panel visibility
+    lessonPanels: {
+      showOrchestra: true,   // left panel
+      showStory:     true,   // right panel
+    },
+
+    // Per-mode backgrounds — lessonBackground overrides background in lesson mode
+    lessonBackground: {
+      type:      'color',
+      color:     '#1a0a2e',
+      imageData: null,
+    },
   };
 
   // ── CRUD helpers ──────────────────────────────────────────────────────────

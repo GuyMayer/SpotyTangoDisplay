@@ -57,6 +57,7 @@ const Display = (() => {
 
   let _profile = null;
   let _currentState = null; // 'idle' | 'track' | 'cortina'
+  let _currentMode = 'milonga'; // tracks last received mode for background selection
   let _lessonMode = false;
   let _transitionActive = false;
   let _localVideoActive = false;
@@ -174,6 +175,9 @@ const Display = (() => {
       else                        _stopLive();
       return;
     }
+
+    // Track mode early so _applyBackground can choose the right background
+    _currentMode = data.mode || 'milonga';
 
     // Apply profile from payload if provided (live profile switch)
     if (data.appearance) {
@@ -337,9 +341,11 @@ const Display = (() => {
     const lessonActive = _lessonMode || !!data.lessonMode || data.mode === 'lesson';
     if (lessonActive) {
       els.trackScreen.classList.add('lesson-mode');
+      _applyBackground(); // re-apply: lesson may have its own background
       _populateLessonPanels(data);
     } else {
       els.trackScreen.classList.remove('lesson-mode');
+      _applyBackground(); // re-apply: returning to milonga background
     }
 
     els.trackScreen.classList.remove('hidden');
@@ -384,7 +390,9 @@ const Display = (() => {
 
   function _applyBackground() {
     if (_localVideoActive) return;
-    const bg = _profile.background || {};
+    // Use lessonBackground when in lesson mode, falling back to regular background
+    const isLesson = _currentMode === 'lesson' || _lessonMode;
+    const bg = (isLesson && _profile.lessonBackground) ? _profile.lessonBackground : (_profile.background || {});
     const layer = els.bgLayer;
     layer.innerHTML = '';
 
@@ -553,6 +561,11 @@ const Display = (() => {
   }
 
   function _populateLessonPanels(data) {
+    // Panel visibility from profile
+    const lp = _profile.lessonPanels || {};
+    if (els.lessonLeft)  els.lessonLeft.style.display  = lp.showOrchestra === false ? 'none' : '';
+    if (els.lessonRight) els.lessonRight.style.display = lp.showStory     === false ? 'none' : '';
+
     // Orchestra bio (left panel)
     const orch = data.orchestraBio || {};
     els.lessonOrchName.textContent    = orch.name    || data.artist || '';

@@ -6,7 +6,7 @@ const Wizard = (() => {
   const STORAGE_STEP = 'spotd_wizard_step';   // resume step if closed mid-way
 
   let _currentStep = 1;
-  const TOTAL_STEPS = 9;
+  const TOTAL_STEPS = 10;
 
   // ── Step definitions ──────────────────────────────────────────────────────
 
@@ -19,7 +19,8 @@ const Wizard = (() => {
     6: { id: 'ai',        title: 'AI Stories'       },
     7: { id: 'branding',  title: 'Branding'         },
     8: { id: 'cortina',   title: 'Cortina Rules'    },
-    9: { id: 'done',      title: 'Done!'            },
+    9: { id: 'design',    title: 'Display Design'   },
+    10: { id: 'done',     title: 'Done!'            },
   };
 
   // ── Public entry points ───────────────────────────────────────────────────
@@ -140,7 +141,7 @@ const Wizard = (() => {
     if (doneBtn) doneBtn.classList.toggle('hidden', _currentStep !== TOTAL_STEPS);
     if (skipBtn) {
       // Skip visible on optional steps 4, 5, 6, and 8
-      skipBtn.classList.toggle('hidden', ![4, 5, 6, 8].includes(_currentStep));
+      skipBtn.classList.toggle('hidden', ![4, 5, 6, 8, 9].includes(_currentStep));
     }
   }
 
@@ -160,7 +161,8 @@ const Wizard = (() => {
       case 6: _renderAI(body);        break;
       case 7: _renderBranding(body);  break;
       case 8: _renderCortina(body);   break;
-      case 9: _renderDone(body);      break;
+      case 9: _renderDesign(body);    break;
+      case 10: _renderDone(body);     break;
     }
   }
 
@@ -578,6 +580,206 @@ const Wizard = (() => {
     `;
   }
 
+  function _renderDesign(body) {
+    const profile = Profiles.getActive();
+    const bg  = profile.background       || {};
+    const lb  = profile.lessonBackground || profile.background || {};
+    const lp  = profile.lessonPanels     || { showOrchestra: true, showStory: true };
+    const all = Profiles.list();
+
+    body.innerHTML = `
+      <h2>Display Design <span class="wiz-optional">(optional)</span></h2>
+
+      <div class="wiz-design-profile-row">
+        <label class="wiz-label" style="flex:1;margin:0">
+          Appearance Profile
+          <select id="wiz-profile-select">
+            ${all.map(p => `<option value="${_esc(p.id)}"${p.id === profile.id ? ' selected' : ''}>${_esc(p.name)}</option>`).join('')}
+          </select>
+        </label>
+        <div class="wiz-profile-btns">
+          <button id="wiz-profile-new" class="wiz-btn ghost small">+ New</button>
+          <button id="wiz-profile-dup" class="wiz-btn ghost small">Dup</button>
+          <button id="wiz-profile-del" class="wiz-btn ghost small" style="color:var(--red,#e06c75)">Del</button>
+        </div>
+      </div>
+
+      <div class="wiz-tabs">
+        <button class="wiz-tab active" data-tab="milonga">Milonga</button>
+        <button class="wiz-tab" data-tab="lesson">Lesson</button>
+      </div>
+
+      <div id="wiz-tab-milonga" class="wiz-tab-panel">
+        <label class="wiz-label">Background Colour
+          <input id="wiz-milonga-bg-color" class="wiz-input" type="color" value="${_esc(bg.color || '#1a0a2e')}" style="height:40px;padding:4px 6px">
+        </label>
+        <label class="wiz-label">Background Image <span class="wiz-optional">(replaces colour)</span>
+          <input id="wiz-milonga-bg-image" class="wiz-input" type="file" accept="image/*">
+        </label>
+        <div id="wiz-milonga-bg-preview" class="wiz-bg-preview">
+          ${bg.imageData ? `<img src="${bg.imageData}" style="max-width:100%;max-height:100px;border-radius:4px;display:block">
+          <button id="wiz-milonga-bg-clear" class="wiz-btn ghost small" style="margin-top:6px">✕ Clear image</button>` : ''}
+        </div>
+      </div>
+
+      <div id="wiz-tab-lesson" class="wiz-tab-panel" style="display:none">
+        <div class="wiz-toggle-row">
+          <label class="wiz-toggle-label">
+            <input type="checkbox" id="wiz-lesson-show-orchestra"${lp.showOrchestra !== false ? ' checked' : ''}>
+            Show Orchestra panel (left)
+          </label>
+        </div>
+        <div class="wiz-toggle-row">
+          <label class="wiz-toggle-label">
+            <input type="checkbox" id="wiz-lesson-show-story"${lp.showStory !== false ? ' checked' : ''}>
+            Show Story panel (right)
+          </label>
+        </div>
+        <label class="wiz-label" style="margin-top:12px">Background Colour
+          <input id="wiz-lesson-bg-color" class="wiz-input" type="color" value="${_esc(lb.color || '#1a0a2e')}" style="height:40px;padding:4px 6px">
+        </label>
+        <label class="wiz-label">Background Image <span class="wiz-optional">(replaces colour)</span>
+          <input id="wiz-lesson-bg-image" class="wiz-input" type="file" accept="image/*">
+        </label>
+        <div id="wiz-lesson-bg-preview" class="wiz-bg-preview">
+          ${lb.imageData ? `<img src="${lb.imageData}" style="max-width:100%;max-height:100px;border-radius:4px;display:block">
+          <button id="wiz-lesson-bg-clear" class="wiz-btn ghost small" style="margin-top:6px">✕ Clear image</button>` : ''}
+        </div>
+      </div>
+    `;
+
+    // ── Tab switching ─────────────────────────────────────────────────────
+    body.querySelectorAll('.wiz-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        body.querySelectorAll('.wiz-tab').forEach(b => b.classList.remove('active'));
+        body.querySelectorAll('.wiz-tab-panel').forEach(p => { p.style.display = 'none'; });
+        btn.classList.add('active');
+        const panel = document.getElementById('wiz-tab-' + btn.dataset.tab);
+        if (panel) panel.style.display = '';
+      });
+    });
+
+    // ── Profile CRUD ──────────────────────────────────────────────────────
+    document.getElementById('wiz-profile-select').addEventListener('change', e => {
+      Profiles.setActive(e.target.value);
+      _renderDesign(body);
+    });
+    document.getElementById('wiz-profile-new').addEventListener('click', () => {
+      const name = prompt('Profile name:');
+      if (!name) return;
+      const p = Profiles.create(name);
+      Profiles.setActive(p.id);
+      _renderDesign(body);
+    });
+    document.getElementById('wiz-profile-dup').addEventListener('click', () => {
+      const p = Profiles.getActive();
+      const dup = Profiles.duplicate(p.id);
+      if (dup) { Profiles.setActive(dup.id); _renderDesign(body); }
+    });
+    document.getElementById('wiz-profile-del').addEventListener('click', () => {
+      const p = Profiles.getActive();
+      if (p.id === 'default') { alert('Cannot delete the default profile.'); return; }
+      if (!confirm('Delete profile "' + p.name + '"?')) return;
+      Profiles.remove(p.id);
+      _renderDesign(body);
+    });
+
+    // ── Image upload helpers ──────────────────────────────────────────────
+    function _bindImageUpload(inputId, previewId, clearId, profileKey) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      input.addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+          const preview = document.getElementById(previewId);
+          preview.innerHTML = `<img src="${ev.target.result}" style="max-width:100%;max-height:100px;border-radius:4px;display:block">
+            <button class="wiz-btn ghost small" style="margin-top:6px" id="${clearId}">✕ Clear image</button>`;
+          document.getElementById(clearId).addEventListener('click', () => {
+            input.value = '';
+            preview.innerHTML = '';
+            const cur = Profiles.getActive();
+            const existing = cur[profileKey] || {};
+            Profiles.update(cur.id, { [profileKey]: Object.assign({}, existing, { type: 'color', imageData: null }) });
+          });
+        };
+        reader.readAsDataURL(file);
+      });
+      const clearBtn = document.getElementById(clearId);
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+          document.getElementById(previewId).innerHTML = '';
+          const cur = Profiles.getActive();
+          const existing = cur[profileKey] || {};
+          Profiles.update(cur.id, { [profileKey]: Object.assign({}, existing, { type: 'color', imageData: null }) });
+        });
+      }
+    }
+
+    _bindImageUpload('wiz-milonga-bg-image', 'wiz-milonga-bg-preview', 'wiz-milonga-bg-clear', 'background');
+    _bindImageUpload('wiz-lesson-bg-image',  'wiz-lesson-bg-preview',  'wiz-lesson-bg-clear',  'lessonBackground');
+  }
+
+  function _saveDesignStep() {
+    const profile = Profiles.getActive();
+    const changes = {};
+
+    // Milonga background colour
+    const mbgColor = document.getElementById('wiz-milonga-bg-color');
+    if (mbgColor) {
+      const existing = profile.background || {};
+      const hasNewImg = !!(document.getElementById('wiz-milonga-bg-image') || {}).files && document.getElementById('wiz-milonga-bg-image').files[0];
+      changes.background = Object.assign({}, existing, {
+        color: mbgColor.value,
+        type:  hasNewImg ? 'image' : (existing.imageData ? 'image' : 'color'),
+      });
+    }
+
+    // Lesson panel toggles
+    const showOrch  = document.getElementById('wiz-lesson-show-orchestra');
+    const showStory = document.getElementById('wiz-lesson-show-story');
+    changes.lessonPanels = {
+      showOrchestra: showOrch  ? showOrch.checked  : true,
+      showStory:     showStory ? showStory.checked : true,
+    };
+
+    // Lesson background colour
+    const lbgColor = document.getElementById('wiz-lesson-bg-color');
+    if (lbgColor) {
+      const existing = profile.lessonBackground || profile.background || {};
+      const hasNewImg = !!(document.getElementById('wiz-lesson-bg-image') || {}).files && document.getElementById('wiz-lesson-bg-image').files[0];
+      changes.lessonBackground = Object.assign({}, existing, {
+        color: lbgColor.value,
+        type:  hasNewImg ? 'image' : (existing.imageData ? 'image' : 'color'),
+      });
+    }
+
+    Profiles.update(profile.id, changes);
+
+    // Milonga background image upload
+    const milongaImg = document.getElementById('wiz-milonga-bg-image');
+    if (milongaImg && milongaImg.files[0]) {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const p = Profiles.getActive();
+        Profiles.update(p.id, { background: Object.assign({}, p.background, { type: 'image', imageData: ev.target.result }) });
+      };
+      reader.readAsDataURL(milongaImg.files[0]);
+    }
+
+    // Lesson background image upload
+    const lessonImg = document.getElementById('wiz-lesson-bg-image');
+    if (lessonImg && lessonImg.files[0]) {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const p = Profiles.getActive();
+        Profiles.update(p.id, { lessonBackground: Object.assign({}, p.lessonBackground || {}, { type: 'image', imageData: ev.target.result }) });
+      };
+      reader.readAsDataURL(lessonImg.files[0]);
+    }
+  }
+
   function _renderDone(body) {
     const roomCode = PusherRelay.getRoomCode();
     const displayUrl = PusherRelay.getDisplayUrl();
@@ -664,6 +866,7 @@ const Wizard = (() => {
       case 6: _saveAIStep();        break;
       case 7: _saveBrandingStep();  break;
       case 8: _saveCortinaStep();   break;
+      case 9: _saveDesignStep();    break;
     }
   }
 
