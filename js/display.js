@@ -33,9 +33,10 @@ const Display = (() => {
     lessonThemes:      $('lesson-themes'),
     artworkWrap:  $('artwork-wrap'),
     artwork:      $('artwork'),
-    trackArtist:  $('track-artist'),
-    trackTitle:   $('track-title'),
-    trackGenre:   $('track-genre'),
+    trackArtist:      $('track-artist'),
+    trackTitle:       $('track-title'),
+    trackTranslation: $('track-translation'),
+    trackGenre:       $('track-genre'),
     trackYear:    $('track-year'),
     tandaCounter: $('tanda-counter'),
     trackNext:       $('track-next'),
@@ -89,7 +90,17 @@ const Display = (() => {
 
     _lessonMode = (new URLSearchParams(window.location.search)).get('lesson') === '1';
     _applyProfileStyles();
-    _showIdle();
+
+    // Restore last known state immediately so a page refresh isn't blank
+    const params2 = new URLSearchParams(window.location.search);
+    const roomForCache = params2.get('room') || 'default';
+    const cached = localStorage.getItem('spotd_display_state_' + roomForCache);
+    if (cached) {
+      try { _handleMessage(JSON.parse(cached)); } catch (e) {}
+    } else {
+      _showIdle();
+    }
+
     _connectPusher();
     _checkLiveSource();
 
@@ -169,6 +180,11 @@ const Display = (() => {
       _profile = _mergeAppearance(_profile, data.appearance);
       _applyProfileStyles();
     }
+
+    // Cache state so page refresh restores last known track
+    const params3 = new URLSearchParams(window.location.search);
+    const roomForCache2 = params3.get('room') || 'default';
+    try { localStorage.setItem('spotd_display_state_' + roomForCache2, JSON.stringify(data)); } catch (e) {}
 
     const mode = data.mode || 'milonga';
     const format = data.format || 'tandas-cortinas';
@@ -276,6 +292,9 @@ const Display = (() => {
     // Text fields
     _setTextField(els.trackArtist, fields, 'artist', data.artist);
     _setTextField(els.trackTitle,  fields, 'title',  data.title);
+    if (els.trackTranslation) {
+      els.trackTranslation.textContent = data.titleTranslation ? '(' + data.titleTranslation + ')' : '';
+    }
     const genreLabel = (data.genre && format !== 'single' && data.tandaPosition)
       ? data.genre + ' #' + data.tandaPosition
       : (data.genre || '');

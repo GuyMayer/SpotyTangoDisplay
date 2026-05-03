@@ -295,7 +295,7 @@ const Control = (() => {
       }
     }
 
-    _pushState({
+    const payload = {
       mode: _mode,
       format: _format,
       state: isPlaying ? 'playing' : 'paused',
@@ -313,7 +313,11 @@ const Control = (() => {
       nextLabel,
       orchestraBio: _getOrchestraBio(artistName),
       songStory: _storyCurrentText || undefined,
-    });
+    };
+    _pushState(payload);
+
+    // Async: translate title if it looks Spanish, then push an update
+    _maybeTranslateTitle(track.name, payload);
   }
 
   async function _pushCurrentState() {
@@ -730,6 +734,56 @@ const Control = (() => {
 
     if (aiBtn) {
       aiBtn.addEventListener('click', () => _generateAiStory(textarea, aiBtn));
+    }
+  }
+
+  // ── Title translation ─────────────────────────────────────────────────────
+
+  const _translationCache = {};  // title → translated string or null
+
+  function _looksSpanish(title) {
+    // Accented vowels, ñ, ¿, ¡ common in Spanish tango titles
+    return /[áéíóúüñ¿¡]/i.test(title);
+  }
+
+  async function _maybeTranslateTitle(title, basePayload) {
+    if (!title || !_looksSpanish(title)) return;
+
+    // Use cache to avoid repeated API calls for the same title
+    if (title in _translationCache) {
+      if (_translationCache[title]) _pushState(Object.assign({}, basePayload, { titleTranslation: _translationCache[title] }));
+      return;
+    }
+
+    const apiKey = localStorage.getItem('spotd_openrouter_key');
+    if (!apiKey) return;
+
+    try {
+      const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + apiKey,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://guymayer.github.io/SpotyTangoDisplay/',
+        },
+        body: JSON.stringify({
+          models: ['openai/gpt-oss-20b:free', 'openai/gpt-oss-120b:free', 'meta-llama/llama-3.3-70b-instruct:free'],
+          route: 'fallback',
+          max_tokens: 20,
+          messages: [{
+            role: 'user',
+            content: 'Translate this Spanish tango title to English. Reply with the English translation only, no quotes, no explanation: ' + title,
+          }],
+        }),
+      });
+      if (!resp.ok) { _translationCache[title] = null; return; }
+      const data = await resp.json();
+      const t = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      const translation = t && t.trim();
+      _translationCache[title] = translation || null;
+      if (translation) _pushState(Object.assign({}, basePayload, { titleTranslation: translation }));
+    } catch (e) {
+      _translationCache[title] = null;
     }
   }
 
