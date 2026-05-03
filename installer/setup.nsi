@@ -1,5 +1,11 @@
 ; SpotyTangoDisplay Windows Installer
 ; Built with NSIS — https://nsis.sourceforge.io
+; ROOT is passed in via /DROOT=... on the command line (absolute path to repo root)
+; For local builds: makensis /DROOT=".." setup.nsi  (run from installer/ dir)
+
+!ifndef ROOT
+  !define ROOT ".."
+!endif
 
 Unicode True
 
@@ -23,21 +29,21 @@ Section "Main"
   SetOutPath "$INSTDIR"
 
   ; App files
-  File "..\relay.js"
-  File "..\index.html"
-  File "..\display.html"
-  File "..\download.html"
-  File "..\favicon.png"
-  File "..\start-windows.bat"
+  File "${ROOT}\relay.js"
+  File "${ROOT}\index.html"
+  File "${ROOT}\display.html"
+  File "${ROOT}\download.html"
+  File "${ROOT}\favicon.png"
+  File "${ROOT}\start-windows.bat"
 
   SetOutPath "$INSTDIR\js"
-  File "..\js\*.js"
+  File "${ROOT}\js\*.js"
 
   SetOutPath "$INSTDIR\css"
-  File "..\css\*.css"
+  File "${ROOT}\css\*.css"
 
   SetOutPath "$INSTDIR\data"
-  File "..\data\*.json"
+  File "${ROOT}\data\*.json"
 
   ; Desktop shortcut → launches start-windows.bat
   CreateShortcut "$DESKTOP\SpotyTangoDisplay.lnk" \

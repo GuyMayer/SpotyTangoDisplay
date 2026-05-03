@@ -20,7 +20,9 @@ jobs:
         run: choco install nsis --no-progress -y
 
       - name: Build installer
-        run: makensis installer\setup.nsi
+        run: |
+          cd installer
+          makensis /DROOT="%CD%\.." setup.nsi
         shell: cmd
 
       - name: Delete existing release (if any)
