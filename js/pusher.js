@@ -144,7 +144,10 @@ const PusherRelay = (() => {
     return binl2hex(binlMD5(str2binl(str), str.length * 8));
   }
 
-  // -- Send via Pusher REST API ----------------------------------------------
+  // Cloudflare Worker that proxies to Pusher REST API with CORS headers
+  const RELAY_URL = 'https://pusher-relay.zoom-photo-co-uk.workers.dev';
+
+  // -- Send via Pusher REST API (via CORS relay) -----------------------------
 
   async function send(payload) {
     const { key, secret, appId, cluster } = getCredentials();
@@ -173,18 +176,18 @@ const PusherRelay = (() => {
     sigParams.sort();
     const qs = sigParams.toString();
     const authSig = await _hmacSha256(secret, 'POST\n' + path + '\n' + qs);
-    const url = 'https://api-' + cluster + '.pusher.com' + path + '?' + qs + '&auth_signature=' + authSig;
+    const url = RELAY_URL + path + '?' + qs + '&auth_signature=' + authSig + '&_cluster=' + cluster;
 
     try {
-      // Pusher REST API has no CORS headers — use no-cors to avoid preflight.
-      // Auth is in the URL query string so no custom headers are needed.
-      // Response is opaque (fire-and-forget); exceptions still surface failures.
-      await fetch(url, {
+      const res = await fetch(url, {
         method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
+        headers: { 'Content-Type': 'application/json' },
         body,
       });
+      if (!res.ok) {
+        console.error('PusherRelay send failed:', res.status, await res.text());
+        return false;
+      }
       return true;
     } catch (err) {
       console.error('PusherRelay send error:', err);
@@ -251,17 +254,16 @@ const PusherRelay = (() => {
     sigParams.sort();
     const qs = sigParams.toString();
     const sig = await _hmacSha256(secret, 'POST\n' + path + '\n' + qs);
-    const url = 'https://api-' + cluster + '.pusher.com' + path + '?' + qs + '&auth_signature=' + sig;
+    const url = RELAY_URL + path + '?' + qs + '&auth_signature=' + sig + '&_cluster=' + (cluster || 'eu');
     try {
-      // Use no-cors for same reason as send() — Pusher REST API has no CORS headers.
-      // We can't read the response status, so any non-exception is treated as success.
-      await fetch(url, {
+      const res = await fetch(url, {
         method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
+        headers: { 'Content-Type': 'application/json' },
         body,
       });
-      return { ok: true };
+      return (res.ok || res.status === 400)
+        ? { ok: true }
+        : { ok: false, error: 'HTTP ' + res.status + ': ' + await res.text() };
     } catch (err) {
       return { ok: false, error: err.message };
     }
