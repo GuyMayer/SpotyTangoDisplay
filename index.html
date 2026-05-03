@@ -179,6 +179,17 @@
         </div>
       </div>
 
+      <div class="card">
+        <div class="card-title">Backup &amp; Restore Settings</div>
+        <p style="font-size:12px;color:#888;margin:0 0 10px">Save all your API keys and settings to a file, then load them on any device.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="settings-export-btn" class="btn">⬇ Export settings</button>
+          <button id="settings-import-btn" class="btn">⬆ Import settings</button>
+          <input type="file" id="settings-import-file" accept=".json" style="display:none">
+        </div>
+        <div id="settings-import-status" style="font-size:12px;margin-top:8px;color:#c9a96e"></div>
+      </div>
+
     </div>
 
   </main>

@@ -54,6 +54,7 @@ const Control = (() => {
     _bindTrackOverride();
     _loadSource();
     _bindSourceToggle();
+    _bindSettingsBackup();
 
     _startSpotify();
     _startPusher();
@@ -873,6 +874,62 @@ const Control = (() => {
       .replace(/"/g, '&quot;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
+  }
+
+  // ── Settings backup / restore ─────────────────────────────────────────────
+
+  const EXPORT_KEYS = [
+    'spotd_pusher_key', 'spotd_pusher_secret', 'spotd_pusher_app_id', 'spotd_pusher_cluster',
+    'spotd_room_code', 'spotd_spotify_client_id', 'spotd_audd_key', 'spotd_lastfm_key',
+    'spotd_openrouter_key', 'spotd_mode', 'spotd_format', 'spotd_dance_override',
+    'spotd_source', 'spotd_autogen_stories', 'spotd_live_tanda_size', 'spotd_live_tanda_style',
+    'spotd_profiles', 'spotd_active_profile', 'spotd_story_overrides', 'spotd_track_types',
+    'spotd_cortina_playlist', 'spotd_cortina_tracks',
+  ];
+
+  function _bindSettingsBackup() {
+    const exportBtn  = document.getElementById('settings-export-btn');
+    const importBtn  = document.getElementById('settings-import-btn');
+    const importFile = document.getElementById('settings-import-file');
+    const status     = document.getElementById('settings-import-status');
+    if (!exportBtn || !importBtn || !importFile) return;
+
+    exportBtn.addEventListener('click', () => {
+      const data = { _version: 1, _exported: new Date().toISOString() };
+      EXPORT_KEYS.forEach(k => {
+        const v = localStorage.getItem(k);
+        if (v !== null) data[k] = v;
+      });
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'tangodisplay-settings-' + new Date().toISOString().slice(0, 10) + '.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    importBtn.addEventListener('click', () => importFile.click());
+
+    importFile.addEventListener('change', () => {
+      const file = importFile.files && importFile.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (!data || typeof data !== 'object') throw new Error('Invalid file');
+          let count = 0;
+          EXPORT_KEYS.forEach(k => {
+            if (k in data) { localStorage.setItem(k, data[k]); count++; }
+          });
+          if (status) status.textContent = '✓ Loaded ' + count + ' settings. Reload the page to apply.';
+        } catch (err) {
+          if (status) status.textContent = '✗ Import failed: ' + err.message;
+        }
+        importFile.value = '';
+      };
+      reader.readAsText(file);
+    });
   }
 
   return { init };
