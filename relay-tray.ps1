@@ -147,28 +147,35 @@ $tray.Add_DoubleClick({ Start-Process "http://localhost:3456/" })
 # Balloon tip on startup
 $tray.ShowBalloonTip(3000, "SpotyTangoDisplay", "Relay running - double-click to open.", [System.Windows.Forms.ToolTipIcon]::Info)
 
-# Open browser once relay responds to HTTP — give up after 30s and show error balloon
+# Poll for relay readiness in background — never block the UI thread
+$pollJob = Start-Job -ScriptBlock {
+    for ($i = 0; $i -lt 60; $i++) {
+        try {
+            $r = Invoke-WebRequest -Uri "http://localhost:3456/" -UseBasicParsing -TimeoutSec 1 -ErrorAction Stop
+            if ($r.StatusCode -eq 200) { return "ok" }
+        } catch {}
+        Start-Sleep -Milliseconds 500
+    }
+    return "timeout"
+}
+
 $timer          = New-Object System.Windows.Forms.Timer
 $timer.Interval = 500
-$pollCount      = 0
 $timer.Add_Tick({
-    $pollCount++
-    if ($pollCount -gt 60) {
+    if ($pollJob.State -eq "Completed") {
         $timer.Stop()
-        $tray.BalloonTipTitle = "SpotyTangoDisplay"
-        $tray.BalloonTipText  = "Relay failed to start - right-click for Debug Info"
-        $tray.BalloonTipIcon  = [System.Windows.Forms.ToolTipIcon]::Error
-        $tray.ShowBalloonTip(8000)
-        return
-    }
-    try {
-        $r = Invoke-WebRequest -Uri "http://localhost:3456/" -UseBasicParsing -TimeoutSec 1 -ErrorAction Stop
-        if ($r.StatusCode -eq 200) {
-            $timer.Stop()
+        $result = Receive-Job $pollJob; Remove-Job $pollJob
+        if ($result -eq "ok") {
             Start-Process "http://localhost:3456/"
+        } else {
+            $tray.BalloonTipTitle = "SpotyTangoDisplay"
+            $tray.BalloonTipText  = "Relay failed to start - right-click for Debug Info"
+            $tray.BalloonTipIcon  = [System.Windows.Forms.ToolTipIcon]::Error
+            $tray.ShowBalloonTip(8000)
         }
-    } catch {
-        # not ready yet - try again next tick
+    } elseif ($pollJob.State -eq "Failed") {
+        $timer.Stop()
+        Remove-Job $pollJob -Force
     }
 })
 $timer.Start()
