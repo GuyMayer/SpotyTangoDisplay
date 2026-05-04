@@ -25,18 +25,22 @@ jobs:
           makensis /DROOT="${{ github.workspace }}" installer\setup.nsi
         shell: pwsh
 
-      - name: Delete existing release (if any)
+      - name: Delete old releases (keep latest only)
         run: |
-          gh release delete latest --yes --cleanup-tag 2>$null || true
+          $tags = gh release list --json tagName --jq '.[].tagName' | Where-Object { $_ -match '^build-' }
+          foreach ($tag in $tags) {
+            gh release delete $tag --yes --cleanup-tag 2>$null
+          }
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: pwsh
 
       - name: Create GitHub Release and upload EXE
         run: |
-          gh release create latest `
-            --title "Latest Release" `
-            --notes "Auto-built installer. Download and run to install SpotyTangoDisplay on Windows." `
+          $tag = "build-${{ github.run_number }}"
+          gh release create $tag `
+            --title "Build ${{ github.run_number }} (${{ github.sha }})" `
+            --notes "Auto-built installer (build #${{ github.run_number }}, commit ${{ github.sha }})." `
             --latest `
             SpotyTangoDisplay-Setup.exe
         env:
