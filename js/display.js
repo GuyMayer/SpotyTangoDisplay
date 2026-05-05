@@ -236,6 +236,11 @@ const Display = (() => {
   // ── Renderers ─────────────────────────────────────────────────────────────
 
   function _renderIdle(data) {
+    if (!_profile) {
+      els.idleScreen.classList.remove('hidden');
+      els.idleMessage.textContent = data.idleMessage || 'Welcome';
+      return;
+    }
     const idle = _profile.idle || {};
     const branding = _profile.branding || {};
 
@@ -268,6 +273,7 @@ const Display = (() => {
 
   function _renderTrack(data, mode, format) {
     format = format || 'tandas-cortinas';
+    if (!_profile) { _renderIdle(data); return; }
     const fields = _fieldsById(_profile.danceFields || []);
 
     // Artwork
