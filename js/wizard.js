@@ -270,7 +270,9 @@ const Wizard = (() => {
       const reader = new FileReader();
       reader.onload = e => {
         try {
-          const data = JSON.parse(e.target.result);
+          let raw = e.target.result;
+          if (raw.startsWith('SKPE1|')) raw = atob(raw.slice(6));
+          const data = JSON.parse(raw);
           if (!data || typeof data !== 'object') throw new Error('Invalid file');
           const KEYS = [
             'spotd_spotify_client_id', 'spotd_audd_key', 'spotd_lastfm_key',
