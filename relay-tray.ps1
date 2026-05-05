@@ -76,15 +76,15 @@ $debugItem.Add_Click({
     } catch {}
     if ($portOk) {
         try {
-            $r = Invoke-WebRequest -Uri "http://localhost:3456/" -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
-            $httpStatus = "$($r.StatusCode) - $($r.RawContent.Length) bytes"
+            $r = Invoke-WebRequest -Uri "http://localhost:3456/ping" -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
+            $httpStatus = "$($r.StatusCode) OK"
         } catch { $httpStatus = "ERROR: $($_.Exception.Message)" }
     }
     $ver   = try { (Get-Content "$PSScriptRoot\version.txt" -ErrorAction Stop).Trim() } catch { "unknown" }
     $nodeV = try { (& node --version 2>$null).Trim() } catch { "not found" }
     $log   = try { (Get-Content "$env:TEMP\SpotyTangoDisplay-relay.log" -Tail 30 -ErrorAction Stop) -join "`n" } catch { "(no log)" }
     $port  = if ($portOk) { "open" } else { "closed" }
-    $msg   = "relay.js PID : $pid_`nPort 3456   : $port`nHTTP GET /  : $httpStatus`nVersion     : $ver`nNode        : $nodeV`nScriptRoot  : $PSScriptRoot`n`n--- relay log ---`n$log"
+    $msg   = "relay.js PID : $pid_`nPort 3456   : $port`nHTTP GET /ping : $httpStatus`nVersion     : $ver`nNode        : $nodeV`nScriptRoot  : $PSScriptRoot`n`n--- relay log ---`n$log"
     [System.Windows.Forms.MessageBox]::Show($msg, "SpotyTangoDisplay Debug", `
         [System.Windows.Forms.MessageBoxButtons]::OK, `
         [System.Windows.Forms.MessageBoxIcon]::Information) | Out-Null
@@ -125,7 +125,7 @@ $tray.ShowBalloonTip(3000, "SpotyTangoDisplay", "Relay running - double-click to
 $pollJob = Start-Job -ScriptBlock {
     for ($i = 0; $i -lt 60; $i++) {
         try {
-            $r = Invoke-WebRequest -Uri "http://localhost:3456/" -UseBasicParsing -TimeoutSec 1 -ErrorAction Stop
+            $r = Invoke-WebRequest -Uri "http://localhost:3456/ping" -UseBasicParsing -TimeoutSec 1 -ErrorAction Stop
             if ($r.StatusCode -eq 200) { return "ok" }
         } catch {}
         Start-Sleep -Milliseconds 500

@@ -117,7 +117,7 @@ const server = http.createServer((req, res) => {
 function _printUrls(port) {
   const nets = os.networkInterfaces();
   console.log('\nSpotyTangoDisplay Local Relay  (port ' + port + ')');
-  console.log('─'.repeat(50));
+  console.log('-'.repeat(50));
   console.log('Open the DJ control app on THIS laptop:');
   console.log('  http://localhost:' + port + '/');
   console.log('\nOpen the display screen on the dancer TV / another device:');
@@ -128,7 +128,7 @@ function _printUrls(port) {
       }
     }
   }
-  console.log('\n⚠  Register this as your Spotify redirect URI:');
+  console.log('\n[!] Register this as your Spotify redirect URI:');
   console.log('   http://localhost:' + port + '/');
   console.log('\nWaiting for connections...\n');
 }
