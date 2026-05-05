@@ -922,10 +922,11 @@ const Control = (() => {
         const v = localStorage.getItem(k);
         if (v !== null) data[k] = v;
       });
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const encoded = 'SKPE1|' + btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+      const blob = new Blob([encoded], { type: 'application/octet-stream' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'tangodisplay-settings-' + new Date().toISOString().slice(0, 10) + '.json';
+      a.download = 'tangodisplay-settings-' + new Date().toISOString().slice(0, 10) + '.skp';
       a.click();
       URL.revokeObjectURL(a.href);
     });
@@ -938,7 +939,9 @@ const Control = (() => {
       const reader = new FileReader();
       reader.onload = e => {
         try {
-          const data = JSON.parse(e.target.result);
+          let raw = e.target.result;
+          if (raw.startsWith('SKPE1|')) raw = decodeURIComponent(escape(atob(raw.slice(6))));
+          const data = JSON.parse(raw);
           if (!data || typeof data !== 'object') throw new Error('Invalid file');
           let count = 0;
           EXPORT_KEYS.forEach(k => {
