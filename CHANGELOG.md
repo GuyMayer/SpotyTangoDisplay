@@ -2,6 +2,24 @@
 
 All notable changes to SpotyTangoDisplay are documented here.
 
+## [1.2.0] — 2026-05-05
+
+### Added
+
+- **Autosave settings on wizard completion.** When the wizard finishes, `TangoPassion_Settings.skp` is automatically downloaded so the setup is immediately portable.
+- **Load Settings button in wizard** (step 2 — Spotify). Allows importing a previously saved `.skp` or `.json` settings file at the start of setup, skipping manual re-entry of all credentials.
+- **Settings export from control panel** now saves as `.skp` (SKPE1-encoded) instead of plain JSON, matching the wizard format. Includes profiles, branding, and logo.
+- **Settings import in control panel** now accepts both `.json` and `.skp` files.
+- **SKPE1 encoding** — settings files are `SKPE1|<base64>` — credentials are not stored in plain text in exported files.
+
+### Fixed
+
+- **Display screen black on first run.** `_renderIdle()` crashed with `Cannot read properties of null` when no appearance profile was configured, leaving the display entirely black. Now shows a basic "Welcome" idle screen when no profile exists.
+- **Debug Info shows "operation timed out"** — `WebClient` was connecting to `::1` (IPv6) because Windows resolves `localhost` to IPv6 first, but relay only binds IPv4 (`0.0.0.0`). Fixed by using `127.0.0.1` explicitly in all WebClient ping calls.
+- **Legacy `.skp` files rejected on import** — file picker now accepts `.skp` in addition to `.json`; legacy `spotm_` key prefix auto-remapped to `spotd_`.
+
+---
+
 ## [1.1.0] — 2026-05-05
 
 ### Changed
