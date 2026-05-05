@@ -790,6 +790,25 @@ const Wizard = (() => {
     }
   }
 
+  function _autoSaveSettings() {
+    const KEYS = [
+      'spotd_spotify_client_id', 'spotd_audd_key', 'spotd_lastfm_key',
+      'spotd_openrouter_key', 'spotd_mode', 'spotd_format', 'spotd_dance_override',
+      'spotd_source', 'spotd_autogen_stories', 'spotd_live_tanda_size', 'spotd_live_tanda_style',
+      'spotd_profiles', 'spotd_active_profile', 'spotd_story_overrides', 'spotd_track_types',
+      'spotd_cortina_playlist', 'spotd_cortina_tracks', 'spotd_relay_mode', 'spotd_local_host',
+    ];
+    const data = { _version: 1, _exported: new Date().toISOString() };
+    KEYS.forEach(k => { const v = localStorage.getItem(k); if (v !== null) data[k] = v; });
+    const encoded = 'SKPE1|' + btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+    const blob = new Blob([encoded], { type: 'application/octet-stream' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'TangoPassion_Settings.skp';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   function _renderDone(body) {
     const displayUrl = PusherRelay.getDisplayUrl();
 
@@ -806,6 +825,7 @@ const Wizard = (() => {
         <a href="${_esc(displayUrl)}" target="_blank" rel="noopener" class="wiz-btn secondary">
           Open Display Screen ↗
         </a>
+        <p class="wiz-hint" id="wiz-save-note" style="color:#c9a96e;margin-top:16px">💾 Your settings file has been saved — keep it to restore on any device.</p>
       </div>
     `;
 
@@ -814,6 +834,9 @@ const Wizard = (() => {
         document.getElementById('wiz-copy-url').textContent = 'Copied!';
       });
     });
+
+    // Trigger download after a short delay so the DOM is ready
+    setTimeout(_autoSaveSettings, 400);
   }
 
   // ── Validation ────────────────────────────────────────────────────────────
