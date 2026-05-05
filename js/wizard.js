@@ -223,9 +223,13 @@ const Wizard = (() => {
       <div id="wiz-spotify-status" class="wiz-status ${loggedIn ? 'ok' : ''}">
         ${loggedIn ? '✓ Spotify connected' : ''}
       </div>
-      <button id="wiz-spotify-connect" class="wiz-btn primary" ${loggedIn ? 'disabled' : ''}>
-        ${loggedIn ? 'Connected' : 'Authorise Spotify'}
-      </button>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button id="wiz-spotify-connect" class="wiz-btn primary" ${loggedIn ? 'disabled' : ''}>
+          ${loggedIn ? 'Connected' : 'Authorise Spotify'}
+        </button>
+        <button id="wiz-load-settings-btn" class="wiz-btn ghost small" title="Import a previously exported settings file">Load Settings</button>
+        <input id="wiz-load-settings-file" type="file" accept=".json" style="display:none">
+      </div>
     `;
 
     // Copy redirect URI
@@ -255,6 +259,46 @@ const Wizard = (() => {
       localStorage.setItem('spotd_spotify_client_id', id);
       CONFIG.spotify.clientId = id;
       Spotify.login();
+    });
+
+    document.getElementById('wiz-load-settings-btn').addEventListener('click', () => {
+      document.getElementById('wiz-load-settings-file').click();
+    });
+    document.getElementById('wiz-load-settings-file').addEventListener('change', function () {
+      const file = this.files && this.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (!data || typeof data !== 'object') throw new Error('Invalid file');
+          const KEYS = [
+            'spotd_spotify_client_id', 'spotd_audd_key', 'spotd_lastfm_key',
+            'spotd_openrouter_key', 'spotd_mode', 'spotd_format', 'spotd_dance_override',
+            'spotd_source', 'spotd_autogen_stories', 'spotd_live_tanda_size', 'spotd_live_tanda_style',
+            'spotd_profiles', 'spotd_active_profile', 'spotd_story_overrides', 'spotd_track_types',
+            'spotd_cortina_playlist', 'spotd_cortina_tracks', 'spotd_relay_mode', 'spotd_local_host',
+          ];
+          let count = 0;
+          KEYS.forEach(k => { if (k in data) { localStorage.setItem(k, data[k]); count++; } });
+          // Refresh the Client ID field inline
+          const restored = localStorage.getItem('spotd_spotify_client_id') || '';
+          const input = document.getElementById('wiz-spotify-client-id');
+          if (input) input.value = restored;
+          if (restored.length > 10) {
+            const link = document.getElementById('wiz-dashboard-link');
+            const row  = document.getElementById('wiz-dashboard-link-row');
+            if (link) link.href = 'https://developer.spotify.com/dashboard/' + encodeURIComponent(restored);
+            if (row)  row.style.display = 'block';
+          }
+          _showError('wiz-spotify-status', '✓ Loaded ' + count + ' settings');
+          document.getElementById('wiz-spotify-status').classList.add('ok');
+        } catch (err) {
+          _showError('wiz-spotify-status', 'Import failed: ' + err.message);
+        }
+        this.value = '';
+      };
+      reader.readAsText(file);
     });
   }
 
