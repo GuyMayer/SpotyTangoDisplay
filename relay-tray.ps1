@@ -78,7 +78,7 @@ $debugItem.Add_Click({
         try {
             $wc = New-Object System.Net.WebClient
             $wc.Proxy = $null
-            $resp = $wc.DownloadString("http://localhost:3456/ping")
+            $resp = $wc.DownloadString("http://127.0.0.1:3456/ping")
             $httpStatus = "200 OK ($resp)"
         } catch { $httpStatus = "ERROR: $($_.Exception.Message)" }
     }
@@ -129,7 +129,7 @@ $pollJob = Start-Job -ScriptBlock {
         try {
             $wc = New-Object System.Net.WebClient
             $wc.Proxy = $null
-            $wc.DownloadString("http://localhost:3456/ping") | Out-Null
+            $wc.DownloadString("http://127.0.0.1:3456/ping") | Out-Null
             return "ok"
         } catch {}
         Start-Sleep -Milliseconds 500
