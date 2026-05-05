@@ -10,12 +10,6 @@ const CONFIG = {
     pollIntervalPlaying: 1000,   // ms when playing
     pollIntervalPaused: 5000,    // ms when paused/idle
   },
-  pusher: {
-    appKey: localStorage.getItem('spotd_pusher_key') || '',
-    cluster: localStorage.getItem('spotd_pusher_cluster') || 'eu',
-    channelPrefix: 'tango-',
-    event: 'track-update',
-  },
   app: {
     version: '1.0.0',
     brand: 'TangoPassion',

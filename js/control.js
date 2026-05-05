@@ -8,7 +8,7 @@ const Control = (() => {
   let _currentTrackId = null;    // track ID for per-track DB overrides
   let _currentDetectedType = ''; // auto-detected type for current track
   let _source = 'spotify';       // 'spotify' | 'live'
-  let _pusherConnected = false;
+
   let _spotifyConnected = false;
   let _danceOverride = '';        // '' | 'Tango' | 'Milonga' | 'Vals' — DJ manual override
   let _orchestras = {};          // loaded from data/orchestras.json
@@ -335,48 +335,10 @@ const Control = (() => {
     if (_lastTrack) _onTrackChange(_lastTrack);
   }
 
-  // ── Pusher ────────────────────────────────────────────────────────────────
+  // ── Relay ─────────────────────────────────────────────────────────────────
 
   function _startPusher() {
-    if (!PusherRelay.hasCredentials()) {
-      _setPusherStatus('warn', 'Relay not configured');
-      return;
-    }
-
-    // Local relay mode — no SDK needed, just show status
-    if (PusherRelay.getRelayMode() === 'local') {
-      _pusherConnected = true;
-      _setPusherStatus('ok', 'Local relay active');
-      return;
-    }
-
-    const { key, cluster } = PusherRelay.getCredentials();
-    const roomCode = PusherRelay.getRoomCode();
-
-    _setPusherStatus('', 'Connecting…');
-
-    // Load Pusher SDK for control-side status monitoring only
-    _loadPusherSdk(key, cluster, () => {
-      // Subscribe purely for connection status feedback
-      PusherRelay.subscribe({
-        roomCode,
-        key,
-        cluster,
-        onMessage: () => {}, // control panel doesn't need to receive its own messages
-        onStatusChange: (state, msg) => {
-          _pusherConnected = (state === 'connected');
-          _setPusherStatus(state === 'connected' ? 'ok' : 'warn', msg || state);
-        },
-      });
-    });
-  }
-
-  function _loadPusherSdk(key, cluster, cb) {
-    if (window.Pusher) { cb(); return; }
-    const script = document.createElement('script');
-    script.src = 'https://js.pusher.com/8.4.0/pusher.min.js';
-    script.onload = cb;
-    document.head.appendChild(script);
+    _setPusherStatus('ok', 'Local relay active');
   }
 
   function _pushState(payload) {
@@ -447,15 +409,12 @@ const Control = (() => {
   // ── Room / display URL ────────────────────────────────────────────────────
 
   function _renderRoomInfo() {
-    const roomCode = PusherRelay.getRoomCode();
     const displayUrl = PusherRelay.getDisplayUrl();
 
-    const codeEl = document.getElementById('room-code');
     const urlEl  = document.getElementById('display-url');
     const linkEl = document.getElementById('display-link');
     const copyBtn = document.getElementById('copy-url-btn');
 
-    if (codeEl) codeEl.textContent = roomCode;
     if (urlEl)  urlEl.textContent  = displayUrl;
     if (linkEl) { linkEl.href = displayUrl; linkEl.textContent = 'Open ↗'; }
 
@@ -510,8 +469,7 @@ const Control = (() => {
   function _renderStatusRow() {
     _setSpotifyStatus(Spotify.isLoggedIn() ? 'ok' : 'error',
       Spotify.isLoggedIn() ? 'Spotify' : 'Spotify disconnected');
-    _setPusherStatus(PusherRelay.hasCredentials() ? '' : 'warn',
-      PusherRelay.hasCredentials() ? 'Relay…' : 'Relay not set up');
+    _setPusherStatus('ok', 'Local relay');
   }
 
   function _setSpotifyStatus(state, label) {
@@ -943,8 +901,7 @@ const Control = (() => {
   // ── Settings backup / restore ─────────────────────────────────────────────
 
   const EXPORT_KEYS = [
-    'spotd_pusher_key', 'spotd_pusher_secret', 'spotd_pusher_app_id', 'spotd_pusher_cluster',
-    'spotd_room_code', 'spotd_spotify_client_id', 'spotd_audd_key', 'spotd_lastfm_key',
+    'spotd_spotify_client_id', 'spotd_audd_key', 'spotd_lastfm_key',
     'spotd_openrouter_key', 'spotd_mode', 'spotd_format', 'spotd_dance_override',
     'spotd_source', 'spotd_autogen_stories', 'spotd_live_tanda_size', 'spotd_live_tanda_style',
     'spotd_profiles', 'spotd_active_profile', 'spotd_story_overrides', 'spotd_track_types',
