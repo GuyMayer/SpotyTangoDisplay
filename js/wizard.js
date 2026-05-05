@@ -228,7 +228,7 @@ const Wizard = (() => {
           ${loggedIn ? 'Connected' : 'Authorise Spotify'}
         </button>
         <button id="wiz-load-settings-btn" class="wiz-btn ghost small" title="Import a previously exported settings file">Load Settings</button>
-        <input id="wiz-load-settings-file" type="file" accept=".json" style="display:none">
+        <input id="wiz-load-settings-file" type="file" accept=".json,.skp" style="display:none">
       </div>
     `;
 
@@ -279,8 +279,16 @@ const Wizard = (() => {
             'spotd_profiles', 'spotd_active_profile', 'spotd_story_overrides', 'spotd_track_types',
             'spotd_cortina_playlist', 'spotd_cortina_tracks', 'spotd_relay_mode', 'spotd_local_host',
           ];
+          // Build a normalised copy: remap any non-spotd_ prefix to spotd_
+          // e.g. spotm_spotify_client_id → spotd_spotify_client_id
+          const normalised = {};
+          Object.keys(data).forEach(k => {
+            if (k.startsWith('_')) return; // skip _version, _exported
+            const remapped = k.startsWith('spotd_') ? k : k.replace(/^[^_]+_/, 'spotd_');
+            normalised[remapped] = data[k];
+          });
           let count = 0;
-          KEYS.forEach(k => { if (k in data) { localStorage.setItem(k, data[k]); count++; } });
+          KEYS.forEach(k => { if (k in normalised) { localStorage.setItem(k, normalised[k]); count++; } });
           // Refresh the Client ID field inline
           const restored = localStorage.getItem('spotd_spotify_client_id') || '';
           const input = document.getElementById('wiz-spotify-client-id');
