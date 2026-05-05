@@ -76,8 +76,10 @@ $debugItem.Add_Click({
     } catch {}
     if ($portOk) {
         try {
-            $r = Invoke-WebRequest -Uri "http://localhost:3456/ping" -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
-            $httpStatus = "$($r.StatusCode) OK"
+            $wc = New-Object System.Net.WebClient
+            $wc.Proxy = $null
+            $resp = $wc.DownloadString("http://localhost:3456/ping")
+            $httpStatus = "200 OK ($resp)"
         } catch { $httpStatus = "ERROR: $($_.Exception.Message)" }
     }
     $ver   = try { (Get-Content "$PSScriptRoot\version.txt" -ErrorAction Stop).Trim() } catch { "unknown" }
@@ -125,8 +127,10 @@ $tray.ShowBalloonTip(3000, "SpotyTangoDisplay", "Relay running - double-click to
 $pollJob = Start-Job -ScriptBlock {
     for ($i = 0; $i -lt 60; $i++) {
         try {
-            $r = Invoke-WebRequest -Uri "http://localhost:3456/ping" -UseBasicParsing -TimeoutSec 1 -ErrorAction Stop
-            if ($r.StatusCode -eq 200) { return "ok" }
+            $wc = New-Object System.Net.WebClient
+            $wc.Proxy = $null
+            $wc.DownloadString("http://localhost:3456/ping") | Out-Null
+            return "ok"
         } catch {}
         Start-Sleep -Milliseconds 500
     }
