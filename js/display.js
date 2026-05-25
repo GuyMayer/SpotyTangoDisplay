@@ -127,7 +127,9 @@ const Display = (() => {
   function _connectPusher() {
     const params = new URLSearchParams(window.location.search);
     const host = params.get('host');
-    _connectLocal(host ? decodeURIComponent(host) : window.location.host);
+    // Default to local relay on 127.0.0.1:3456 when no host specified
+    const defaultHost = '127.0.0.1:3456';
+    _connectLocal(host ? decodeURIComponent(host) : defaultHost);
   }
 
   function _connectLocal(host) {

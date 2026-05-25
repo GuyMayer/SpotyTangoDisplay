@@ -8,7 +8,7 @@ const PusherRelay = (() => {
   function setRelayMode() {}  // noop — always local
 
   function getLocalHost() {
-    return localStorage.getItem(LOCAL_HOST_KEY) || window.location.host;
+    return localStorage.getItem(LOCAL_HOST_KEY) || '127.0.0.1:3456';
   }
 
   function saveLocalHost(host) {
