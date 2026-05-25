@@ -333,17 +333,38 @@ const Wizard = (() => {
   }
 
   function _renderPusher(body) {
-    body.innerHTML = `
-      <h2>Display Relay</h2>
-      <p>The relay server runs on this laptop and streams track info to the dancer screen over your local WiFi. No account needed.</p>
-      <ol class="wiz-steps-list">
-        <li>Open <code>http://127.0.0.1:3456</code> in your browser (not localhost).</li>
-        <li>The relay auto-starts when you launch the app — the installer handles it.</li>
-        <li>Make sure your Spotify app has <code>http://127.0.0.1:3456/</code> as a redirect URI (uses 127.0.0.1, not localhost — Spotify requires explicit IPv4).</li>
-        <li>Open the display screen on the dancer TV using the URL shown on the next screen.</li>
-      </ol>
-      <p class="wiz-hint">Both this laptop and the dancer TV must be on the same WiFi network.</p>
-    `;
+    const isLocal = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
+
+    if (isLocal) {
+      body.innerHTML = `
+        <h2>Display Relay</h2>
+        <p>The relay is already running on this machine — you're all set.</p>
+        <div class="wiz-status ok" style="margin-bottom:12px">✓ Relay running on 127.0.0.1:3456</div>
+        <p>On the dancer screen (any TV or monitor on the same WiFi):</p>
+        <ol class="wiz-steps-list">
+          <li>Open the display URL shown on the final step</li>
+          <li>Go fullscreen (F11)</li>
+        </ol>
+        <p class="wiz-hint">Make sure your Spotify app has <code>http://127.0.0.1:3456/</code> as a redirect URI.</p>
+      `;
+    } else {
+      body.innerHTML = `
+        <h2>Display Relay</h2>
+        <p>The relay runs on <strong>your DJ laptop</strong> and streams track info to the dancer screen over local WiFi. No internet needed after setup.</p>
+
+        <div class="wiz-section-title">Set up on your laptop</div>
+        <ol class="wiz-steps-list">
+          <li>Make sure <strong>Node.js</strong> is installed — open PowerShell and run <code>node --version</code>. If not, get it from <a href="https://nodejs.org" target="_blank" rel="noopener">nodejs.org</a> (LTS version).</li>
+          <li>Download the app: <a href="https://github.com/GuyMayer/SpotyTangoDisplay/archive/refs/heads/main.zip" target="_blank" rel="noopener">SpotyTangoDisplay.zip</a> and extract it.</li>
+          <li>Open a terminal in the extracted folder and run: <code>node relay.js</code></li>
+          <li>Open <code>http://127.0.0.1:3456</code> in your browser</li>
+          <li>Come back to this wizard to finish Spotify setup</li>
+        </ol>
+
+        <p class="wiz-hint">On Windows, double-click <code>start-windows.bat</code> — it launches the relay and a tray icon automatically.</p>
+        <p class="wiz-hint">Spotify redirect URI: add <code>http://127.0.0.1:3456/</code> to your Spotify app settings.</p>
+      `;
+    }
   }
 
   function _renderAudD(body) {
@@ -822,23 +843,42 @@ const Wizard = (() => {
 
   function _renderDone(body) {
     const displayUrl = PusherRelay.getDisplayUrl();
+    const isLocal = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
 
-    body.innerHTML = `
-      <div class="wiz-center">
-        <div class="wiz-hero-icon">🎉</div>
-        <h2>You're all set!</h2>
-        <p>Open the dancer screen on any TV or monitor on the same WiFi.</p>
-        <p class="wiz-hint" style="color:#ff9800">The relay starts automatically with the app — no extra steps needed.</p>
-        <div class="wiz-url-block">
-          <span class="wiz-url">${_esc(displayUrl)}</span>
-          <button id="wiz-copy-url" class="wiz-btn ghost small">Copy</button>
+    if (isLocal) {
+      body.innerHTML = `
+        <div class="wiz-center">
+          <div class="wiz-hero-icon">🎉</div>
+          <h2>You're all set!</h2>
+          <p>Open the dancer screen on any TV or monitor on the same WiFi.</p>
+          <div class="wiz-url-block">
+            <span class="wiz-url">${_esc(displayUrl)}</span>
+            <button id="wiz-copy-url" class="wiz-btn ghost small">Copy</button>
+          </div>
+          <a href="${_esc(displayUrl)}" target="_blank" rel="noopener" class="wiz-btn secondary">
+            Open Display Screen ↗
+          </a>
+          <p class="wiz-hint" id="wiz-save-note" style="color:#c9a96e;margin-top:16px">Your settings file has been saved — keep it to restore on any device.</p>
         </div>
-        <a href="${_esc(displayUrl)}" target="_blank" rel="noopener" class="wiz-btn secondary">
-          Open Display Screen ↗
-        </a>
-        <p class="wiz-hint" id="wiz-save-note" style="color:#c9a96e;margin-top:16px">💾 Your settings file has been saved — keep it to restore on any device.</p>
-      </div>
-    `;
+      `;
+    } else {
+      body.innerHTML = `
+        <div class="wiz-center">
+          <div class="wiz-hero-icon">🚀</div>
+          <h2>Setup complete on this browser!</h2>
+          <p>Now run the app <strong>locally on your DJ laptop</strong> to use the relay and display screen.</p>
+          <div class="wiz-hint" style="text-align:left;margin-top:12px">
+            <strong>On your laptop:</strong><br>
+            1. Make sure Node.js is installed: <code>node --version</code><br>
+            2. Download: <a href="https://github.com/GuyMayer/SpotyTangoDisplay/archive/refs/heads/main.zip">SpotyTangoDisplay.zip</a><br>
+            3. Extract and run: <code>node relay.js</code><br>
+            4. Open <code>http://127.0.0.1:3456</code><br>
+            5. Your settings will carry over — just import your .skp file
+          </div>
+          <p class="wiz-hint" id="wiz-save-note" style="color:#c9a96e;margin-top:16px">Your settings file has been saved below. Import it on your laptop to skip re-entering credentials.</p>
+        </div>
+      `;
+    }
 
     document.getElementById('wiz-copy-url').addEventListener('click', () => {
       navigator.clipboard.writeText(displayUrl).then(() => {
