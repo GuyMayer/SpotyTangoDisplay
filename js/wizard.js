@@ -1,4 +1,4 @@
-// wizard.js — First-time setup wizard (6 steps)
+// wizard.js — First-time setup wizard (10 steps)
 // Runs on first visit; skips if already configured. Re-runnable from Settings.
 
 const Wizard = (() => {
@@ -176,10 +176,10 @@ const Wizard = (() => {
         <div class="wiz-hero-icon">🎶</div>
         <h2>Welcome to TangoPassion Display</h2>
         <p>Show your dancers what's playing — live, on any screen — without any install.</p>
-        <p>This 6-step wizard gets you set up in about 5 minutes.</p>
+        <p>This 10-step wizard gets you set up in about 5 minutes. Only Spotify is required — everything else is optional.</p>
         <ul class="wiz-checklist">
-          <li>Connect your Spotify account</li>
-          <li>Set up your free Pusher relay (so the dancer screen updates live)</li>
+          <li>Connect your Spotify account (Premium required)</li>
+          <li>Set up the local relay (so the dancer screen updates live)</li>
           <li>Add your DJ branding</li>
           <li>Configure cortina detection (optional)</li>
         </ul>
@@ -195,6 +195,8 @@ const Wizard = (() => {
     body.innerHTML = `
       <h2>Connect Spotify</h2>
 
+      <p class="wiz-hint" style="margin-bottom:12px"><strong>Requirements:</strong> Spotify Premium account, and you must add yourself as an authorised user in the app dashboard (User Management tab, max 5 users).</p>
+
       <div class="wiz-redirect-box">
         <div class="wiz-redirect-label">Redirect URI — add this to your Spotify app</div>
         <div class="wiz-redirect-row">
@@ -204,9 +206,9 @@ const Wizard = (() => {
       </div>
 
       <ol class="wiz-steps-list">
-        <li>Open your app in <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a></li>
-        <li>Click <strong>Edit Settings</strong></li>
-        <li>Under <strong>Redirect URIs</strong>, add the URI above and click <strong>Save</strong></li>
+        <li>Go to <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a> and create an app (or open your existing one)</li>
+        <li>Click <strong>Edit Settings</strong> → add the Redirect URI above → <strong>Save</strong></li>
+        <li>Go to <strong>User Management</strong> → add your name and email → <strong>Add user</strong></li>
         <li>Paste your <strong>Client ID</strong> below</li>
       </ol>
 
