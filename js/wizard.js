@@ -190,7 +190,14 @@ const Wizard = (() => {
   function _renderSpotify(body) {
     const clientId = localStorage.getItem('spotd_spotify_client_id') || '';
     const loggedIn = Spotify && Spotify.isLoggedIn && Spotify.isLoggedIn();
-    const redirectUri = window.location.origin + window.location.pathname.replace(/index\.html$/, '');
+    // Default to local setup: always show 127.0.0.1 as the primary redirect URI
+    const localUri = 'http://127.0.0.1:3456/';
+    const currentUri = window.location.origin + window.location.pathname.replace(/index\.html$/, '');
+    const isLocal = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
+    const redirectUri = isLocal ? currentUri : localUri;
+    const altNote = !isLocal
+      ? `<p class="wiz-hint" style="margin-top:6px">Also add <code>${_esc(currentUri)}</code> if you use the hosted version.</p>`
+      : '';
 
     body.innerHTML = `
       <h2>Connect Spotify</h2>
@@ -203,6 +210,7 @@ const Wizard = (() => {
           <code id="wiz-redirect-uri" class="wiz-redirect-uri">${_esc(redirectUri)}</code>
           <button id="wiz-copy-redirect" class="wiz-btn ghost small">Copy</button>
         </div>
+        ${altNote}
       </div>
 
       <ol class="wiz-steps-list">
