@@ -30,7 +30,7 @@ Hosted on GitHub Pages. No install. Works across two PCs via a Pusher relay.
 
 ## Architecture
 
-```
+```text
 DJ PC (Control App)                     Display PC
 ┌─────────────────────────┐             ┌─────────────────────────┐
 │  index.html             │             │  display.html           │
@@ -53,7 +53,7 @@ DJ PC (Control App)                     Display PC
 
 ## File Structure
 
-```
+```text
 SpotyTangoDisplay/
 ├── index.html          — Control app (DJ PC)
 ├── display.html        — Dancer display (Display PC)

@@ -119,7 +119,7 @@ function _printUrls(port) {
   console.log('\nSpotyTangoDisplay Local Relay  (port ' + port + ')');
   console.log('-'.repeat(50));
   console.log('Open the DJ control app on THIS laptop:');
-  console.log('  http://localhost:' + port + '/');
+  console.log('  http://127.0.0.1:' + port + '/');
   console.log('\nOpen the display screen on the dancer TV / another device:');
   for (const addrs of Object.values(nets)) {
     for (const addr of addrs) {
@@ -129,7 +129,7 @@ function _printUrls(port) {
     }
   }
   console.log('\n[!] Register this as your Spotify redirect URI:');
-  console.log('   http://localhost:' + port + '/');
+  console.log('   http://127.0.0.1:' + port + '/');
   console.log('\nWaiting for connections...\n');
 }
 

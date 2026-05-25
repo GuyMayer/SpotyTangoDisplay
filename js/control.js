@@ -409,25 +409,57 @@ const Control = (() => {
   // ── Room / display URL ────────────────────────────────────────────────────
 
   function _renderRoomInfo() {
-    const displayUrl = PusherRelay.getDisplayUrl();
+    _refreshDisplayUrl();
 
-    const urlEl  = document.getElementById('display-url');
-    const linkEl = document.getElementById('display-link');
     const copyBtn = document.getElementById('copy-url-btn');
-
-    // Show a compact local path when running on localhost/127.0.0.1
-    const isLocal = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
-    if (urlEl)  urlEl.textContent  = isLocal ? '/display.html' : displayUrl;
-    if (linkEl) linkEl.href = displayUrl;
-
     if (copyBtn) {
       copyBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(displayUrl).then(() => {
+        navigator.clipboard.writeText(PusherRelay.getDisplayUrl()).then(() => {
           copyBtn.classList.add('copied');
           setTimeout(() => copyBtn.classList.remove('copied'), 1500);
         });
       });
     }
+
+    // Host edit toggle
+    const editBtn = document.getElementById('edit-host-btn');
+    const editRow = document.getElementById('host-edit-row');
+    const hostInput = document.getElementById('host-edit-input');
+    const saveBtn  = document.getElementById('host-edit-save');
+    const cancelBtn = document.getElementById('host-edit-cancel');
+
+    if (editBtn && editRow) {
+      editBtn.addEventListener('click', () => {
+        hostInput.value = PusherRelay.getLocalHost();
+        editRow.style.display = 'flex';
+        hostInput.focus();
+      });
+    }
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => { editRow.style.display = 'none'; });
+    }
+    if (saveBtn && hostInput) {
+      saveBtn.addEventListener('click', () => {
+        const val = hostInput.value.trim();
+        if (val) {
+          PusherRelay.saveLocalHost(val);
+          _refreshDisplayUrl();
+        }
+        editRow.style.display = 'none';
+      });
+      hostInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') saveBtn.click();
+      });
+    }
+  }
+
+  function _refreshDisplayUrl() {
+    const displayUrl = PusherRelay.getDisplayUrl();
+    const urlEl  = document.getElementById('display-url');
+    const linkEl = document.getElementById('display-link');
+    const isLocal = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
+    if (urlEl)  urlEl.textContent  = isLocal ? '/display.html' : displayUrl;
+    if (linkEl) linkEl.href = displayUrl;
   }
 
   // ── Now Playing panel ─────────────────────────────────────────────────────

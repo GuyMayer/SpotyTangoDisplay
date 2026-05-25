@@ -157,6 +157,14 @@
           <a id="display-link" href="#" target="_blank" rel="noopener" class="btn icon-btn" title="Open display screen">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3H3a1 1 0 00-1 1v9a1 1 0 001 1h9a1 1 0 001-1v-3M10 2h4v4M9 7l5-5"/></svg>
           </a>
+          <button id="edit-host-btn" class="btn icon-btn" title="Set local relay address">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2"/><path d="M8 2v2M8 12v2M2 8h2M12 8h2"/><path d="M4.5 4.5l1.5 1.5M10 10l1.5 1.5M11.5 4.5L10 6M6 10l-1.5 1.5"/></svg>
+          </button>
+        </div>
+        <div id="host-edit-row" style="display:none;margin-top:8px;align-items:center;gap:6px">
+          <input id="host-edit-input" type="text" placeholder="127.0.0.1:3456" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 8px;font-size:12px">
+          <button id="host-edit-save" class="btn small">Save</button>
+          <button id="host-edit-cancel" class="btn icon-btn" title="Cancel">✕</button>
         </div>
         <div id="status-row" style="margin-top:10px">
           <span id="status-spotify" class="status-pill"><span class="status-dot"></span>Spotify</span>
