@@ -71,6 +71,10 @@ const Spotify = (() => {
       body,
     });
 
+    // Remove code from URL regardless of outcome — stale codes block the app
+    const clean = window.location.pathname + window.location.hash;
+    window.history.replaceState({}, document.title, clean);
+
     if (!res.ok) {
       console.error('Spotify token exchange failed:', await res.text());
       return false;
@@ -79,10 +83,6 @@ const Spotify = (() => {
     const data = await res.json();
     _storeTokens(data);
     sessionStorage.removeItem(STORAGE.codeVerifier);
-
-    // Remove code from URL
-    const clean = window.location.pathname + window.location.hash;
-    window.history.replaceState({}, document.title, clean);
     return true;
   }
 
