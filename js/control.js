@@ -415,14 +415,16 @@ const Control = (() => {
     const linkEl = document.getElementById('display-link');
     const copyBtn = document.getElementById('copy-url-btn');
 
-    if (urlEl)  urlEl.textContent  = displayUrl;
-    if (linkEl) { linkEl.href = displayUrl; linkEl.textContent = 'Open ↗'; }
+    // Show a compact local path when running on localhost/127.0.0.1
+    const isLocal = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
+    if (urlEl)  urlEl.textContent  = isLocal ? '/display.html' : displayUrl;
+    if (linkEl) linkEl.href = displayUrl;
 
     if (copyBtn) {
       copyBtn.addEventListener('click', () => {
         navigator.clipboard.writeText(displayUrl).then(() => {
-          copyBtn.textContent = 'Copied!';
-          setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
+          copyBtn.classList.add('copied');
+          setTimeout(() => copyBtn.classList.remove('copied'), 1500);
         });
       });
     }

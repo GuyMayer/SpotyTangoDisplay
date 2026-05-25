@@ -380,6 +380,20 @@ main {
 .btn.danger  { border-color: var(--red); color: var(--red); }
 .btn.danger:hover { background: rgba(244,67,54,0.1); }
 
+.btn.icon-btn {
+  padding: 5px;
+  line-height: 0;
+  border-radius: 4px;
+  min-width: 28px;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+.btn.icon-btn.copied { color: var(--accent); border-color: var(--accent); }
+.btn.icon-btn svg { flex-shrink: 0; }
+
 /* ── DJ message card ───────────────────────────────────────────── */
 
 #dj-msg-input {
