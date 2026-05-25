@@ -44,10 +44,7 @@ if exist "relay.js" goto :start_relay
 :: Otherwise download the latest release
 echo Downloading SpotyTangoDisplay...
 echo.
-powershell -NoProfile -Command ^
-  "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; ^
-   Invoke-WebRequest -Uri 'https://github.com/GuyMayer/SpotyTangoDisplay/archive/refs/heads/main.zip' ^
-   -OutFile '%TEMP%\SpotyTangoDisplay.zip'"
+powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://github.com/GuyMayer/SpotyTangoDisplay/archive/refs/heads/main.zip' -OutFile '%TEMP%\SpotyTangoDisplay.zip'"
 if errorlevel 1 (
   echo Download failed. Check your internet connection.
   pause
@@ -55,8 +52,7 @@ if errorlevel 1 (
 )
 
 echo Extracting...
-powershell -NoProfile -Command ^
-  "Expand-Archive -Path '%TEMP%\SpotyTangoDisplay.zip' -DestinationPath '%TEMP%\SpotyTangoDisplay' -Force"
+powershell -NoProfile -Command "Expand-Archive -Path '%TEMP%\SpotyTangoDisplay.zip' -DestinationPath '%TEMP%\SpotyTangoDisplay' -Force"
 
 :: Move to a permanent location
 echo Installing to %%USERPROFILE%%\SpotyTangoDisplay...
