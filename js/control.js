@@ -47,16 +47,30 @@ const Control = (() => {
           <strong>This is the hosted preview.</strong>
           For the dancer display, run locally on your DJ laptop.
         </span>
-        <a href="https://raw.githubusercontent.com/GuyMayer/SpotyTangoDisplay/main/setup.bat"
-           download="SpotyTangoDisplay-Setup.bat"
-           style="background:var(--accent);color:#000;border:none;padding:6px 14px;border-radius:5px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap">
+        <button id="setup-banner-dl" style="background:var(--accent);color:#000;border:none;padding:6px 14px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">
           Download setup.bat
-        </a>
+        </button>
         <button id="setup-banner-close" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;line-height:1;padding:0 4px" title="Dismiss">&times;</button>
       </div>`;
     banner.style.cssText = 'background:#1e1e2e;border-bottom:1px solid var(--accent);padding:10px 16px;margin:-16px -16px 16px -16px';
     const app = document.getElementById('app');
     if (app) app.insertBefore(banner, app.firstChild);
+
+    document.getElementById('setup-banner-dl').addEventListener('click', async () => {
+      try {
+        const resp = await fetch('https://raw.githubusercontent.com/GuyMayer/SpotyTangoDisplay/main/setup.bat');
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'SpotyTangoDisplay-Setup.bat';
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        // fallback: open raw URL
+        window.open('https://raw.githubusercontent.com/GuyMayer/SpotyTangoDisplay/main/setup.bat', '_blank');
+      }
+    });
 
     document.getElementById('setup-banner-close').addEventListener('click', () => {
       localStorage.setItem('spotd_setup_dismissed', '1');

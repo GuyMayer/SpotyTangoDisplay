@@ -353,7 +353,7 @@ const Wizard = (() => {
         <p>The relay runs on <strong>your DJ laptop</strong> and streams track info to the dancer screen over local WiFi. No internet needed after setup.</p>
 
         <div class="wiz-section-title">One-click setup</div>
-        <p><a href="https://raw.githubusercontent.com/GuyMayer/SpotyTangoDisplay/main/setup.bat" target="_blank" rel="noopener" style="font-weight:600">Download setup.bat</a> — double-click it on your laptop. It installs Node.js (if needed), downloads the app, starts the relay, and opens the control panel. That's it.</p>
+        <p><button id="wiz-dl-setup" class="wiz-btn primary">Download setup.bat</button> — double-click it on your laptop. It installs Node.js (if needed), downloads the app, starts the relay, and opens the control panel. That's it.</p>
 
         <div class="wiz-section-title" style="margin-top:16px">Or set up manually</div>
         <ol class="wiz-steps-list">
@@ -366,6 +366,25 @@ const Wizard = (() => {
 
         <p class="wiz-hint">Spotify redirect URI: add <code>http://127.0.0.1:3456/</code> to your Spotify app settings.</p>
       `;
+    }
+
+    // Wire up download button (force-download via blob to avoid browser displaying .bat as text)
+    const dlBtn = document.getElementById('wiz-dl-setup');
+    if (dlBtn) {
+      dlBtn.addEventListener('click', async () => {
+        try {
+          const resp = await fetch('https://raw.githubusercontent.com/GuyMayer/SpotyTangoDisplay/main/setup.bat');
+          const blob = await resp.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'SpotyTangoDisplay-Setup.bat';
+          a.click();
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          window.open('https://raw.githubusercontent.com/GuyMayer/SpotyTangoDisplay/main/setup.bat', '_blank');
+        }
+      });
     }
   }
 
