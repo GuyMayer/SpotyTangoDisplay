@@ -329,9 +329,10 @@ const Wizard = (() => {
       <h2>Display Relay</h2>
       <p>The relay server runs on this laptop and streams track info to the dancer screen over your local WiFi. No account needed.</p>
       <ol class="wiz-steps-list">
-        <li>The installer already set this up — the relay starts automatically when you launch the app.</li>
+        <li>Open <code>http://127.0.0.1:3456</code> in your browser (not localhost).</li>
+        <li>The relay auto-starts when you launch the app — the installer handles it.</li>
+        <li>Make sure your Spotify app has <code>http://127.0.0.1:3456/</code> as a redirect URI (uses 127.0.0.1, not localhost — Spotify requires explicit IPv4).</li>
         <li>Open the display screen on the dancer TV using the URL shown on the next screen.</li>
-        <li>In your Spotify developer dashboard, add <code>http://localhost:3456/</code> as a redirect URI.</li>
       </ol>
       <p class="wiz-hint">Both this laptop and the dancer TV must be on the same WiFi network.</p>
     `;

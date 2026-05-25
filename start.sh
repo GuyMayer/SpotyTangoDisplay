@@ -14,7 +14,7 @@ node relay.js &
 RELAY_PID=$!
 
 sleep 1
-open "http://localhost:3456"
+open "http://127.0.0.1:3456"
 
 echo "Running (PID $RELAY_PID). Press Ctrl+C to stop."
 wait $RELAY_PID
