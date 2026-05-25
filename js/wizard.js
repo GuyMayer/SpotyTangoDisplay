@@ -352,7 +352,10 @@ const Wizard = (() => {
         <h2>Display Relay</h2>
         <p>The relay runs on <strong>your DJ laptop</strong> and streams track info to the dancer screen over local WiFi. No internet needed after setup.</p>
 
-        <div class="wiz-section-title">Set up on your laptop</div>
+        <div class="wiz-section-title">One-click setup</div>
+        <p><a href="https://raw.githubusercontent.com/GuyMayer/SpotyTangoDisplay/main/setup.bat" target="_blank" rel="noopener" style="font-weight:600">Download setup.bat</a> — double-click it on your laptop. It installs Node.js (if needed), downloads the app, starts the relay, and opens the control panel. That's it.</p>
+
+        <div class="wiz-section-title" style="margin-top:16px">Or set up manually</div>
         <ol class="wiz-steps-list">
           <li>Make sure <strong>Node.js</strong> is installed — open PowerShell and run <code>node --version</code>. If not, get it from <a href="https://nodejs.org" target="_blank" rel="noopener">nodejs.org</a> (LTS version).</li>
           <li>Download the app: <a href="https://github.com/GuyMayer/SpotyTangoDisplay/archive/refs/heads/main.zip" target="_blank" rel="noopener">SpotyTangoDisplay.zip</a> and extract it.</li>
@@ -361,7 +364,6 @@ const Wizard = (() => {
           <li>Come back to this wizard to finish Spotify setup</li>
         </ol>
 
-        <p class="wiz-hint">On Windows, double-click <code>start-windows.bat</code> — it launches the relay and a tray icon automatically.</p>
         <p class="wiz-hint">Spotify redirect URI: add <code>http://127.0.0.1:3456/</code> to your Spotify app settings.</p>
       `;
     }
