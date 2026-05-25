@@ -32,9 +32,44 @@ const Control = (() => {
     return _orchestras[key] || null;
   }
 
+  // ── Local setup nudge for GitHub Pages visitors ──────────────────────────
+
+  function _checkLocalSetup() {
+    const isLocal = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
+    if (isLocal) return;
+    if (localStorage.getItem('spotd_setup_dismissed')) return;
+
+    const banner = document.createElement('div');
+    banner.id = 'setup-banner';
+    banner.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="flex:1;min-width:200px">
+          <strong>This is the hosted preview.</strong>
+          For the dancer display, run locally on your DJ laptop.
+        </span>
+        <a href="https://raw.githubusercontent.com/GuyMayer/SpotyTangoDisplay/main/setup.bat"
+           download="SpotyTangoDisplay-Setup.bat"
+           style="background:var(--accent);color:#000;border:none;padding:6px 14px;border-radius:5px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap">
+          Download setup.bat
+        </a>
+        <button id="setup-banner-close" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;line-height:1;padding:0 4px" title="Dismiss">&times;</button>
+      </div>`;
+    banner.style.cssText = 'background:#1e1e2e;border-bottom:1px solid var(--accent);padding:10px 16px;margin:-16px -16px 16px -16px';
+    const app = document.getElementById('app');
+    if (app) app.insertBefore(banner, app.firstChild);
+
+    document.getElementById('setup-banner-close').addEventListener('click', () => {
+      localStorage.setItem('spotd_setup_dismissed', '1');
+      banner.remove();
+    });
+  }
+
   // ── Boot ──────────────────────────────────────────────────────────────────
 
   function init() {
+    // Nudge GitHub Pages visitors to set up locally
+    _checkLocalSetup();
+
     // Run wizard on first visit
     if (!Wizard.isComplete()) {
       Wizard.runIfNeeded();
