@@ -121,6 +121,82 @@ const Control = (() => {
     TangoDB.preload();
     _loadOrchestras();
     _checkVersion();
+    _startTabCoordination();
+    _startRelayMonitor();
+  }
+
+  // ── Tab coordination (prevent multiple control panels) ───────────────────
+
+  function _startTabCoordination() {
+    try {
+      const channel = new BroadcastChannel('spotytango-control');
+      // Claim this tab as active
+      channel.postMessage({ type: 'claim' });
+
+      channel.onmessage = (e) => {
+        if (e.data && e.data.type === 'claim') {
+          // Another tab is active — show warning
+          channel.postMessage({ type: 'ack', id: Math.random() });
+        }
+        if (e.data && e.data.type === 'ack') {
+          _showDuplicateTabWarning();
+        }
+      };
+
+      // Give other tabs 300ms to respond, then consider ourselves the owner
+      setTimeout(() => {
+        channel.onmessage = (e) => {
+          if (e.data && e.data.type === 'claim') {
+            channel.postMessage({ type: 'ack', id: Math.random() });
+          }
+        };
+      }, 300);
+    } catch { /* BroadcastChannel not supported — skip */ }
+  }
+
+  function _showDuplicateTabWarning() {
+    const banner = document.createElement('div');
+    banner.id = 'duplicate-tab-banner';
+    banner.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="flex:1">⚠ Another control panel is already open. Close the other tabs to avoid conflicts.</span>
+        <button id="dup-tab-close" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px">&times;</button>
+      </div>`;
+    banner.style.cssText = 'background:#2a1a0a;border-bottom:1px solid #8a6a3a;padding:8px 16px;margin:-16px -16px 16px -16px;font-size:13px;color:#c8a96e';
+    const app = document.getElementById('app');
+    if (app) app.insertBefore(banner, app.firstChild);
+    document.getElementById('dup-tab-close').addEventListener('click', () => banner.remove());
+  }
+
+  // ── Relay health monitor ─────────────────────────────────────────────────
+
+  function _startRelayMonitor() {
+    // Only monitor when running locally (not on GitHub Pages)
+    if (window.location.hostname !== '127.0.0.1' && window.location.hostname !== 'localhost') return;
+
+    setInterval(async () => {
+      try {
+        const res = await fetch('http://127.0.0.1:3456/ping');
+        if (res.ok) {
+          // Relay is up — hide any disconnect banner
+          const banner = document.getElementById('relay-disconnect-banner');
+          if (banner) banner.remove();
+        }
+      } catch {
+        // Relay unreachable
+        _showRelayDisconnectBanner();
+      }
+    }, 10000); // every 10 seconds
+  }
+
+  function _showRelayDisconnectBanner() {
+    if (document.getElementById('relay-disconnect-banner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'relay-disconnect-banner';
+    banner.innerHTML = '🔌 Relay disconnected — restart relay.js to reconnect.';
+    banner.style.cssText = 'background:#2a0a0a;border-bottom:1px solid #8a3a3a;padding:8px 16px;margin:-16px -16px 16px -16px;font-size:13px;color:#f44';
+    const app = document.getElementById('app');
+    if (app) app.insertBefore(banner, app.firstChild);
   }
 
   // ── Version check + update modal ─────────────────────────────────────────
@@ -169,8 +245,11 @@ const Control = (() => {
         updateBtn.style.border = 'none';
       }
 
-      // Also show modal if not dismissed this session
-      if (sessionStorage.getItem('spotd_update_dismissed') === remote) return;
+      // Show modal if not dismissed (dismissal lasts 7 days)
+      const dismissed = (() => {
+        try { return JSON.parse(localStorage.getItem('spotd_update_dismissed') || 'null'); } catch { return null; }
+      })();
+      if (dismissed && dismissed.version === remote && Date.now() - (dismissed.ts || 0) < 7 * 86400000) return;
 
       const overlay = document.getElementById('update-overlay');
       const textEl  = document.getElementById('update-modal-text');
@@ -185,7 +264,8 @@ const Control = (() => {
       if (dismissBtn) {
         dismissBtn.addEventListener('click', () => {
           overlay.classList.add('hidden');
-          sessionStorage.setItem('spotd_update_dismissed', remote);
+          localStorage.setItem('spotd_update_dismissed',
+            JSON.stringify({ version: remote, ts: Date.now() }));
         });
       }
     } catch {
