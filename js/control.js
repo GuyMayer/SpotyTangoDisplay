@@ -126,19 +126,50 @@ const Control = (() => {
   // ── Version check + update modal ─────────────────────────────────────────
 
   async function _checkVersion() {
+    // Show installed version immediately
+    const installedEl = document.getElementById('about-installed-ver');
+    if (installedEl) installedEl.textContent = 'v' + CONFIG.app.version;
+
     try {
       const resp = await fetch(
         'https://raw.githubusercontent.com/GuyMayer/SpotyTangoDisplay/main/version.txt',
         { cache: 'no-cache' }
       );
-      if (!resp.ok) return;
+      if (!resp.ok) {
+        const latestEl = document.getElementById('about-latest-ver');
+        if (latestEl) latestEl.textContent = 'unavailable';
+        return;
+      }
       const remote = resp.text ? (await resp.text()).trim() : '';
       if (!remote) return;
 
       const local = CONFIG.app.version;
-      if (_compareVersions(remote, local) <= 0) return;
+      const latestEl  = document.getElementById('about-latest-ver');
+      const updateBtn = document.getElementById('about-update-btn');
 
-      // Already dismissed this version this session?
+      if (latestEl) latestEl.textContent = 'v' + remote;
+
+      if (_compareVersions(remote, local) <= 0) {
+        // Up to date
+        if (updateBtn) {
+          updateBtn.textContent = '✓ Up to Date';
+          updateBtn.style.background = '#1a3a1a';
+          updateBtn.style.color = '#4caf50';
+          updateBtn.style.border = '1px solid #2a4a2a';
+          updateBtn.removeAttribute('href');
+        }
+        return;
+      }
+
+      // Newer version available — highlight button + show modal
+      if (updateBtn) {
+        updateBtn.textContent = '⬆ Update to v' + remote;
+        updateBtn.style.background = 'var(--accent)';
+        updateBtn.style.color = '#000';
+        updateBtn.style.border = 'none';
+      }
+
+      // Also show modal if not dismissed this session
       if (sessionStorage.getItem('spotd_update_dismissed') === remote) return;
 
       const overlay = document.getElementById('update-overlay');
@@ -157,7 +188,10 @@ const Control = (() => {
           sessionStorage.setItem('spotd_update_dismissed', remote);
         });
       }
-    } catch { /* network unavailable — silent */ }
+    } catch {
+      const latestEl = document.getElementById('about-latest-ver');
+      if (latestEl) latestEl.textContent = 'unavailable';
+    }
   }
 
   function _compareVersions(a, b) {
