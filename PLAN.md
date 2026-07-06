@@ -1,10 +1,20 @@
 # SpotyTangoDisplay — Project Plan
 
+> **Version:** 1.2.0 | **Updated:** 2026-07-06 | **126 commits**
+> **Live:** <https://guymayer.github.io/SpotyTangoDisplay/>
+
 ## What It Is
 
-A web app for tango DJs and teachers that displays current Spotify track info on a dancer screen.
-Standalone project associated with **TangoPassion** (tangopassion.co.uk).
-Hosted on GitHub Pages. No install. Works across two PCs via a Pusher relay.
+A web app for tango DJs and teachers that displays live track info on a dancer
+screen — at milongas, lessons, or workshops. Two surfaces:
+
+1. **Software** — browser-based control panel + fullscreen display, served by a
+   zero-dependency Node.js local relay. GitHub Pages hosts the UI; the relay
+   runs on the DJ's laptop.
+2. **Venue Kit** — portable hardware kit (router + Android TV stick) for
+   deploying the display on any venue TV without touching the venue's network.
+
+Branded under **TangoPassion** (<https://tangopassion.co.uk>). White-label ready.
 
 ---
 
@@ -14,63 +24,104 @@ Hosted on GitHub Pages. No install. Works across two PCs via a Pusher relay.
 - **Default DJ name (wizard pre-fill):** TangoPassion
 - **Default logo:** TangoPassion logo (to be added to `assets/`)
 - **Custom domain (future):** `display.tangopassion.co.uk` → GitHub Pages CNAME
-  - When ready: add `CNAME` file to repo root, point DNS to `guymayer.github.io`
-  - Update Spotify redirect URI to `https://display.tangopassion.co.uk/` at that point
+  - Add `CNAME` file to repo root, point DNS to `guymayer.github.io`
+  - Update Spotify redirect URI to `https://display.tangopassion.co.uk/`
 
 ---
 
 ## Repository
 
-- **Repo:** `GuyMayer/SpotyTangoDisplay` (GitHub account: GuyMayer)
-- **Hosting:** GitHub Pages (public repo required)
-- **Live URL:** `https://guymayer.github.io/SpotyTangoDisplay/`
-- **Spotify redirect URI:** `https://guymayer.github.io/SpotyTangoDisplay/`
+- **Repo:** `GuyMayer/SpotyTangoDisplay`
+- **Hosting:** GitHub Pages (public repo)
+- **CI/CD:** GitHub Actions — NSIS Windows installer build on push to `main`;
+  deploy to GitHub Pages
+- **Live URL:** <https://guymayer.github.io/SpotyTangoDisplay/>
+- **Spotify redirect URI:** <https://guymayer.github.io/SpotyTangoDisplay/>
 
 ---
 
 ## Architecture
 
 ```text
-DJ PC (Control App)                     Display PC
-┌─────────────────────────┐             ┌─────────────────────────┐
-│  index.html             │             │  display.html           │
-│  - Spotify PKCE auth    │  Pusher     │  - No login             │
-│  - Settings / profiles  │ ─────────▶  │  - Fullscreen renderer  │
-│  - Cortina rules        │  real-time  │  - Freeze on disconnect │
-│  - Branding config      │             │  - Chrome only          │
-│  - Mode toggle          │             │                         │
-└─────────────────────────┘             └─────────────────────────┘
-         │
-         │ polls every 1s (5s when paused)
-         ▼
-   Spotify Web API
-   /currently-playing
-   /queue
-   /artists/{id} (genre, cached)
+                        ┌──────────────────────────────────┐
+                        │       GL-AR300M16-Ext Router      │
+                        │       SSID: TangoDisplay (open)   │
+                        │       Client isolation ON          │
+                        │       Captive portal → display     │
+                        └──┬────────────┬────────────┬──────┘
+                           │ Ethernet   │ WiFi       │ WiFi
+                           ▼            ▼            ▼
+                    ┌──────────┐  ┌──────────┐  ┌──────────────┐
+                    │ DJ Laptop │  │ Android   │  │ Participants' │
+                    │ relay.js  │  │ TV stick  │  │ phones        │
+                    │ :3456     │  │ (HDMI→TV) │  │ (display URL) │
+                    │ index.html│  │ fullscreen│  └──────────────┘
+                    └─────┬─────┘  │ display   │
+                          │        └──────────┘
+                          │ SSE (port 3456)
+                          ▼
+                   ┌──────────────┐
+                   │ Spotify API  │
+                   │ (poll 1s/5s) │
+                   └──────────────┘
 ```
+
+**DJ laptop** runs `relay.js` (Node.js HTTP + SSE server, port 3456, zero deps).
+Control panel at `http://localhost:3456/`. Display at
+`http://<laptop-ip>:3456/display.html`.
+
+**No Pusher, no cloud relay, no internet required after Spotify auth.**
+Pusher was removed in v1.1.0. The local relay handles all communication.
+
+### Alternative: Two-laptop setup (no venue kit)
+
+```text
+DJ Laptop (relay.js :3456) ──WiFi──► Display Laptop (display.html?host=...)
+```
+
+Any device on the same WiFi can open the display URL. No router kit needed.
 
 ---
 
-## File Structure
+## File Structure (actual, as of v1.2.0)
 
 ```text
 SpotyTangoDisplay/
-├── index.html          — Control app (DJ PC)
-├── display.html        — Dancer display (Display PC)
+├── index.html              — DJ control panel
+├── display.html            — Dancer fullscreen display
+├── download.html           — Public download/install landing page
+├── favicon.png
+├── relay.js                — Local HTTP + SSE relay server (Node.js, zero deps)
+├── relay-tray.ps1          — Windows system tray wrapper (singleton, auto-open)
+├── start-windows.bat       — Windows one-click launcher (checks Node.js, winget)
+├── start.sh                — macOS/Linux launcher
+├── setup.bat               — Windows auto-download + install + launch
+├── version.txt             — Current version (1.2.0)
+├── SpotyTangoDisplay_Settings.skp  — Example settings backup (SKPE1 encoded)
+├── PLAN.md                 — This file
+├── CHANGELOG.md
 ├── js/
-│   ├── spotify.js      — PKCE auth + API polling
-│   ├── pusher.js       — Relay send/receive wrapper
-│   ├── cortina.js      — Cortina detection logic
-│   ├── tanda.js        — Tanda position tracking
-│   ├── profiles.js     — Appearance profile CRUD
-│   ├── wizard.js       — First-time setup wizard
-│   ├── control.js      — Control panel UI logic
-│   └── display.js      — Display renderer logic
+│   ├── config.js           — Central config (Spotify client ID)
+│   ├── spotify.js          — PKCE OAuth2 auth + API polling + genre cache
+│   ├── pusher.js           — Local relay send/receive wrapper (Pusher removed)
+│   ├── cortina.js          — Cortina detection (genre denylist + playlist override)
+│   ├── tanda.js            — Tanda position tracking (history-based)
+│   ├── profiles.js         — Appearance profile CRUD (localStorage)
+│   ├── wizard.js           — 10-step first-time setup wizard
+│   ├── control.js          — DJ control panel UI logic
+│   ├── display.js          — Dancer display renderer (SSE subscriber)
+│   ├── audd.js             — AudD music recognition (mic → track ID)
+│   ├── lastfm.js           — Song story lookup (Last.fm → Wikipedia)
+│   └── tango-db.js         — Offline tango DB (~20k tracks, el-recodo.com)
 ├── css/
-│   ├── control.css     — Control panel styles
-│   └── display.css     — Dancer display styles
-└── assets/
-    └── logo.svg        — SpotyTangoDisplay default logo
+│   ├── control.css         — Control panel styles
+│   └── display.css         — Dancer display styles
+├── data/
+│   ├── orchestras.json     — ~25 orchestra biographies
+│   ├── tango-db.json       — Offline tango track type database
+│   └── tango-stories.json  — Song stories (local cache)
+└── installer/
+    └── setup.nsi           — NSIS Windows installer definition
 ```
 
 ---
@@ -78,7 +129,9 @@ SpotyTangoDisplay/
 ## Display Modes
 
 ### Milonga Mode
+
 Full tango event experience:
+
 - Artist, title, genre, year, album artwork
 - Tanda position counter (Track 2 of 4) — history-based
 - Cortina overlay ("CORTINA" or custom label)
@@ -86,38 +139,59 @@ Full tango event experience:
 - Idle message when nothing is playing
 
 ### Lesson Mode
+
 Simple track display — cortina/tanda logic off:
+
 - Artist, title, genre, year, album artwork
+- 3-column layout: orchestra bio | track info | song story
 - DJ logo + branding
 - Idle screen with branding when paused
 
-Switch live from control panel. Same appearance profile for both modes.
+### Live Mode (AudD)
+
+Display listens via microphone, identifies tracks without Spotify:
+
+- AudD API for music recognition (300 req/month free tier ≈ 2.5h milonga)
+- 30s poll interval
+- Synthesizes same payload format → display renders identically
+- Source toggle in control panel: `[Spotify]` `[Live (mic)]`
+
+Switch modes live from control panel. Same appearance profile across all modes.
 
 ---
 
 ## Cortina Detection
 
-Two methods combined:
+Two methods, combined:
 
-1. **Genre denylist** — fetch artist genres from Spotify API (`/artists/{id}`), cached per artist.
-   User configures dance genres (e.g. `tango`, `milonga`, `vals`, `foxtrot`).
-   If any artist genre matches → dance track. No match → cortina.
+1. **Genre denylist** — fetch artist genres from Spotify API (`/artists/{id}`),
+   cached per artist. User configures dance genres (e.g. `tango`, `milonga`,
+   `vals`). Any artist genre match → dance track. No match → cortina.
 
-2. **Cortina playlist override** — user pastes a Spotify playlist URL.
-   Any track in that playlist is always treated as a cortina, regardless of genre.
+2. **Cortina playlist override** — user pastes a Spotify playlist URL. Any track
+   in that playlist is always treated as a cortina.
 
-Display label overrides: each denylist entry can have a custom display label
-(e.g. denylist entry `tango vals` → display label `Vals`).
+Display label overrides: each denylist entry can have a custom label
+(e.g. denylist `tango vals` → display label `Vals`).
 
 ---
 
-## Pusher Relay
+## Local Relay (`relay.js`)
 
-- **Model:** DJ brings their own free Pusher account. Wizard guides setup.
-- **Channel:** `tango-{roomCode}` (room code auto-generated, saved to localStorage)
-- **Event:** `track-update` — full state JSON pushed on every change
-- **Display URL:** `https://guymayer.github.io/SpotyTangoDisplay/display.html?room=XXXX`
-- **On disconnect:** Display freezes last track info on screen
+- **Protocol:** HTTP + Server-Sent Events (SSE)
+- **Port:** 3456 (auto-increments 3457–3465 if busy)
+- **Dependencies:** None (Node.js stdlib only: `http`, `fs`, `path`, `os`)
+- **Routes:**
+  - `GET /` — serves `index.html` (DJ control panel)
+  - `GET /display.html` — dancer display
+  - `GET /events` — SSE stream (display subscribes)
+  - `POST /push` — control panel pushes state → broadcast to all SSE clients
+  - `GET /ping` — health check (returns `pong`)
+  - `GET /*` — static file server (JS, CSS, data, images)
+- **CORS:** open (`Access-Control-Allow-Origin: *`)
+- **Windows tray:** `relay-tray.ps1` — singleton guard, system tray icon,
+  auto-opens browser, Debug Info dialog (port status, version, recent logs),
+  kill-on-exit
 
 ### State payload (pushed on every track change)
 
@@ -147,32 +221,41 @@ Display label overrides: each denylist entry can have a custom display label
 - Named profiles, multiple per DJ, stored in localStorage
 - Switchable live — display updates immediately
 - Per-field: color, font family, font size, bold, italic
-- Field visibility: show/hide Genre, Artist, Year, Title, Artwork independently (Dance and Cortina columns)
-- Text order: drag to reorder fields for dance display, cortina display, and "Coming Up" preview
-- Background: image (upload, stored as base64 in localStorage) or video (upload, stored as object URL)
-- Cortina background: optionally swap to different image/video during cortinas
+- Field visibility: show/hide Genre, Artist, Year, Title, Artwork independently
+  (Dance and Cortina columns)
+- Text order: drag to reorder fields for dance, cortina, and "Coming Up"
+- Background: image (base64 in localStorage) or video (object URL)
+- Cortina background: optionally different image/video during cortinas
 - Transition: fade style + duration between tracks
 
 ### Branding (per profile)
+
 - DJ / event name — text, own font/color/position
-- Logo image — upload, position (corner: TL/TR/BL/BR or centre), size, opacity
+- Logo image — upload, position (TL/TR/BL/BR or centre), size, opacity
 - Idle screen: logo + event name displayed prominently when nothing is playing
-- No "SpotyTangoDisplay" branding on the display screen (white-label ready)
+- No "SpotyTangoDisplay" branding on display screen (white-label ready)
 
 ---
 
-## First-Time Setup Wizard
+## Wizard (10 Steps)
 
 Runs on first visit. Resumes if closed mid-way. Re-runnable from Settings.
 
 | Step | Content |
-|---|---|
-| 1. Welcome | App intro, "set up in 5 steps" |
-| 2. Spotify Connect | PKCE OAuth — connects DJ's Spotify account |
-| 3. Pusher Setup | Guide to create free Pusher account + paste credentials. Test button. |
-| 4. Branding | DJ name, logo upload, accent color. Live preview. |
-| 5. Cortina Rules | Dance genre list (pre-filled), optional cortina playlist URL. Skippable. |
-| 6. Done | Display URL + room code + QR code. "Open Display" and "Go to Control Panel" buttons. |
+| --- | --- |
+| 1. Welcome | App intro, what you'll set up |
+| 2. Spotify Connect | PKCE OAuth, load settings from .skp file |
+| 3. Relay Setup | Local relay — one-click download or manual setup |
+| 4. AudD (Live) | AudD API key + 3s mic test (optional, skippable) |
+| 5. Last.fm | Last.fm API key for song stories (optional) |
+| 6. AI (OpenRouter) | OpenRouter API key for orchestra bios (optional) |
+| 7. Branding | DJ name, logo upload, accent color, live preview |
+| 8. Cortina Rules | Dance genre list (pre-filled), optional playlist URL |
+| 9. Display Design | Appearance profiles — colors, fonts, backgrounds |
+| 10. Done | Display URL, copy/share, save settings .skp file |
+
+Settings auto-saved as `.skp` (SKPE1-encoded) on completion. Importable on
+another laptop to skip re-entry.
 
 ---
 
@@ -181,16 +264,29 @@ Runs on first visit. Resumes if closed mid-way. Re-runnable from Settings.
 - **Auth:** PKCE OAuth2 — no client secret, runs entirely in browser
 - **Scopes:** `user-read-currently-playing user-read-playback-state`
 - **Polling:** every 1s when playing, every 5s when paused/idle
-- **Genre cache:** artist genres cached in sessionStorage — one API call per unique artist
+- **Genre cache:** artist genres cached in sessionStorage
 - **Token refresh:** PKCE refresh token flow, transparent to user
+
+---
+
+## Data Sources (Lesson Mode Enrichment)
+
+| Source | What | Status |
+| --- | --- | --- |
+| `data/orchestras.json` | ~25 orchestra bios (era, style, singers) | Done |
+| `data/tango-db.json` | ~20k tracks from el-recodo.com (type + year) | Done |
+| `data/tango-stories.json` | Song story cache (local + AI-generated) | Done |
+| OpenRouter AI | Orchestra bio fallback for unknown orchestras | Done |
+| Last.fm API | Song story lookup (→ Wikipedia fallback) | Done |
+| AudD API | Live microphone recognition | Done |
 
 ---
 
 ## Connection & Offline Behaviour
 
 | Scenario | Behaviour |
-|---|---|
-| Display PC loses Pusher | Freeze last track info. No overlay. |
+| --- | --- |
+| Display loses relay connection | Freeze last track. Auto-reconnect. |
 | DJ PC loses Spotify | Show last known state. Retry silently. |
 | Nothing playing | Show idle message + branding |
 | Player paused | Hold current track display. Poll drops to 5s. |
@@ -199,23 +295,167 @@ Runs on first visit. Resumes if closed mid-way. Re-runnable from Settings.
 
 ## Browser Support
 
-- **Chrome only** (both DJ PC and Display PC)
+- **Chrome / Chromium** (DJ laptop + display). Firefox works for display but not
+  officially supported.
 
 ---
 
-## Build Order
+## Venue Hardware Kit
 
-1. Repo + GitHub Pages setup + Spotify app registration
-2. `spotify.js` — PKCE auth + polling + genre cache
-3. `cortina.js` + `tanda.js` — detection logic (unit-testable, no UI)
-4. `pusher.js` — send/receive wrapper
-5. `display.html` + `display.css` + `display.js` — dancer screen renderer
-6. `profiles.js` — localStorage CRUD
-7. `control.html` + `control.css` + `control.js` — control panel
-8. `wizard.js` — first-time setup flow
-9. Appearance editor (colors, fonts, background, branding)
-10. Lesson mode toggle
-11. QA + end-to-end test with two browsers
+Portable kit for deploying the display on any venue TV without touching the
+venue's network or WiFi.
+
+### Bill of Materials
+
+| Item | Model | Price |
+| --- | --- | --- |
+| Router | GL.iNet GL-AR300M16-Ext (external antennas, OpenWrt) | ~£25–30 |
+| Android TV stick | RK3518, Android 14, Google Play | ~£25–30 |
+| HDMI cable | Short (0.5m), for TV stick | ~£3 |
+| USB power | Micro-USB for router + USB-C for TV stick | reuse |
+| App on stick | Fully Kiosk Browser (free) — auto-boot URL, fullscreen | free |
+
+### Router Config (GL.iNet, one-time)
+
+- SSID: `TangoDisplay` (open, no password)
+- Client isolation: ON
+- Captive portal: redirect to `http://192.168.8.100:3456/display.html`
+- Static DHCP lease: DJ laptop MAC → `192.168.8.100`
+- DJ laptop connects via **Ethernet** (not WiFi) for separation
+- No internet uplink — local only. Phones auto-fall back to mobile data
+
+### DJ Laptop Firewall (Windows, one-time)
+
+```powershell
+netsh advfirewall set privateprofile firewallpolicy `
+  blockinbound,allowoutbound
+netsh advfirewall firewall add rule name="TangoDisplay" `
+  dir=in action=allow protocol=TCP localport=3456
+```
+
+### Participant Flow
+
+1. Participant scans QR code → auto-joins `TangoDisplay` WiFi (no password)
+2. Captive portal pops up → redirects to display URL
+3. Display loads in phone browser — one tap, no typing
+
+### QR Code
+
+```text
+WIFI:T:nopass;S:TangoDisplay;;
+```
+
+Generate: `pip install qrcode[pil] && python3 -c "import qrcode; qrcode.make('WIFI:T:nopass;S:TangoDisplay;;').save('tango-wifi-qr.png')"`
+
+---
+
+## Feature Status (as of 2026-07-06)
+
+### Done (v1.2.0)
+
+- [x] Spotify PKCE OAuth + polling + genre cache
+- [x] Local relay (HTTP + SSE, Node.js, zero deps)
+- [x] Cortina detection (genre denylist + playlist override)
+- [x] Tanda position tracking (history-based)
+- [x] Display screen renderer (SSE subscriber, fullscreen)
+- [x] Appearance profiles (colors, fonts, backgrounds, branding, transitions)
+- [x] 10-step wizard with settings export/import (.skp SKPE1 encoded)
+- [x] Windows tray app (singleton, debug info, auto-open browser)
+- [x] Windows one-click launcher (checks Node.js, winget auto-install)
+- [x] NSIS installer → EXE via GitHub Actions
+- [x] Lesson mode (3-column: orchestra bio | track | song story)
+- [x] Live mode (AudD microphone recognition)
+- [x] Last.fm song stories + Wikipedia fallback
+- [x] Offline tango DB (~20k tracks from el-recodo.com)
+- [x] AI orchestra bio fallback (OpenRouter, cached)
+- [x] Song story persistence (custom + AI-saved)
+- [x] Settings backup/restore (full export of all keys)
+- [x] Next track / tanda preview on display
+- [x] macOS/Linux launcher (`start.sh`)
+
+### Remaining Work
+
+#### Software
+
+- [ ] **tango-db.json enrichment** — Python script to add singer `s` field from
+  elrecodo.csv (~8k of 20k entries)
+- [ ] **Custom domain** — `display.tangopassion.co.uk` CNAME + DNS + Spotify
+  redirect URI update
+- [ ] **TangoPassion logo** — add brand logo to `assets/`
+- [ ] **Smoke test / QA checklist** — end-to-end test with two browsers
+- [ ] **Non-Chrome browser validation** — Firefox display testing
+
+#### Venue Kit
+
+- [ ] **QR code generator script** — automate PNG generation in repo
+- [ ] **Captive portal HTML** — lightweight redirect page on router
+- [ ] **Kit packing checklist** — laminated card: what's in the case, setup
+  steps, troubleshooting
+- [ ] **Acquire hardware** — order router + TV stick
+- [ ] **Router config doc** — step-by-step GL.iNet config with screenshots
+- [ ] **Field test** — deploy at a real milonga
+
+---
+
+## Deployment Runbook
+
+### Pre-Event (at home, 10 min)
+
+1. Charge/power all devices
+2. Laptop: run `relay.js` → verify `http://localhost:3456/` loads
+3. Laptop: log into Spotify in control panel → verify track display updates
+4. Android stick: install Fully Kiosk Browser, set start URL to
+   `http://192.168.8.100:3456/display.html`
+5. Router: confirm SSID `TangoDisplay` is broadcasting, captive portal works
+6. Pack: router, TV stick, HDMI cable, USB cables, laptop charger
+
+### At Venue (5 min)
+
+1. Plug router into power — place near DJ table (Ethernet reach)
+2. Plug TV stick into venue TV HDMI + USB power
+3. Connect DJ laptop to router **Ethernet** port
+4. Start `relay.js` on laptop (or it's already running)
+5. TV: switch to correct HDMI input → display should appear
+6. Verify: play a track on Spotify → display updates
+7. Print/show QR code for participants
+
+### Troubleshooting
+
+| Symptom | Check |
+| --- | --- |
+| Display black/blank | TV on correct HDMI? Fully Kiosk booted? Relay running? |
+| Display stuck on old track | Laptop → router Ethernet connected? |
+| Phones can't connect | SSID `TangoDisplay` visible? Client isolation ON? |
+| Captive portal not popup | Android: open browser manually. iOS: auto. |
+| Spotify not updating | Logged in? Playing on this device? Check `/ping`. |
+
+---
+
+## Build Order (Historical — all steps complete)
+
+1. ✅ Repo + GitHub Pages + Spotify app registration
+2. ✅ `spotify.js` — PKCE auth + polling + genre cache
+3. ✅ `cortina.js` + `tanda.js` — detection logic
+4. ✅ `pusher.js` → local relay wrapper
+5. ✅ `display.html` + `display.css` + `display.js` — display renderer
+6. ✅ `profiles.js` — localStorage CRUD
+7. ✅ `control.html` + `control.css` + `control.js` — control panel
+8. ✅ `wizard.js` — 10-step setup flow
+9. ✅ Appearance editor
+10. ✅ Lesson mode
+11. ✅ AudD live recognition
+12. ✅ Windows installer + tray app
+13. ✅ Last.fm + AI orchestra bios + tango DB
+
+### Next Build Order (prioritised)
+
+1. TangoPassion logo asset
+2. Custom domain (`display.tangopassion.co.uk`)
+3. Venue kit — acquire hardware, router config, QR script, captive portal
+4. Venue kit — field test at a real milonga
+5. tango-db.json singer field enrichment
+6. Smoke test / QA checklist
+7. Non-Chrome browser validation
 
 ---
 
@@ -223,57 +463,5 @@ Runs on first visit. Resumes if closed mid-way. Re-runnable from Settings.
 
 - [ ] White-label / business model (build is white-label-ready; model TBD)
 - [ ] Whether to open-source or keep private long-term
-
----
-
-## Feature Status (as of 2026-05-03)
-
-### Done
-
-- [x] Spotify polling + PKCE auth
-- [x] Pusher relay (send/receive)
-- [x] Cortina + tanda detection
-- [x] Display screen renderer
-- [x] Profiles + appearance editor
-- [x] Wizard (6 steps)
-- [x] Next track / tanda preview on display
-- [x] Dance type: "From database (el-recodo)" option
-- [x] **Lesson mode** — 3-column layout (orchestra bio | track info | song story)
-  - Toggled by DJ mode button (Milonga / Lesson)
-  - Left panel: `data.orchestraBio.{name, nickname, era, style, characteristics[], notable_singers[]}`
-  - Right panel: `data.songStory`, `data.songThemes[]`
-- [x] **AI orchestra bio fallback** — for orchestras not in data/orchestras.json, fetches bio from OpenRouter
-  - Cache persisted to `localStorage` key `spotd_orchestra_cache`
-  - Included in export/import (`EXPORT_KEYS`)
-  - Fields: `name, nickname, era, style, characteristics[], notable_singers[]`
-- [x] **Song story persistence** — `spotd_story_overrides` (custom + AI-saved stories) in `EXPORT_KEYS`
-- [x] **Settings export/import** — full backup JSON of all `EXPORT_KEYS` including bios and stories
-
-### AudD Live Recognition — In Progress
-
-Display screen listens via mic, identifies tracks without Spotify. Files remaining:
-
-| File | Change |
-| --- | --- |
-| `display.html` | `<script src="js/audd.js">` + `<div id="live-indicator">` |
-| `css/display.css` | `#live-indicator` pulsing red dot, fixed bottom-left |
-| `display.js` | `_source` var, 30s poll loop, synthesize payload → `_handleMessage()` |
-| `index.html` | "Input Source" card — `[Spotify]` `[Live (mic)]` toggle |
-| `control.js` | `_source` localStorage `spotd_source`, push via Pusher on toggle |
-| `css/control.css` | `#source-toggle` styles (reuse `.mode-btn` pattern) |
-| `wizard.js` | New AudD step (step 4, bump branding→5, cortina→6, done→7). API key + 3s test. Optional. |
-
-Notes:
-- `localStorage` is same-origin — key saved in wizard on index.html, read by display.html ✅
-- Poll every 30s. AudD free = 300 req/month ≈ 2.5h milonga. Warn user in wizard.
-- On match: synthesize data object, call `_handleMessage()` directly (no Pusher round-trip).
-
-### Lesson Mode Data Pipeline — Upcoming
-
-1. **tango-db.json enrichment** — Python script adds singer `s` field from elrecodo.csv (~8,000 of 20,259 entries)
-2. **data/orchestras.json** — ~25 orchestras, year-ranged periods: `[{from, to, style, mood, characteristics[], notable_singers[]}]`
-   - Lookup: `getOrchestra(name, year)` → matching period, fallback to most iconic
-   - Cover: Canaro, D'Arienzo, Firpo, Fresedo, Lomuto, Pugliese, De Angelis, Troilo, Calò, Varela, Di Sarli, Donato, De Caro, Biagi, Tanturi, D'Agostino, Piazzolla, Basso, Sassone, Pontier, Rodriguez, Federico, Demare, Laurenz, Salgán
-3. **data/tango-stories.json** — offline Node.js AI build script, ~500 tracks, `{story, themes[]}`
-4. **tango-db.js** — `lookup()` returns `{type, year, source, singer}`
-5. **control.js** — `_pushState` adds `singer`, `orchestraBio`, `songStory`, `songThemes`
+- [ ] Pricing if commercial (per-event license? subscription? hardware bundle?)
+- [ ] Venue kit — sell as pre-configured bundle or DIY guide?
