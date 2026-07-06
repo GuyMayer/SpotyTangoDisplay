@@ -120,7 +120,58 @@ const Control = (() => {
     _startPusher();
     TangoDB.preload();
     _loadOrchestras();
+    _checkVersion();
   }
+
+  // ── Version check + update modal ─────────────────────────────────────────
+
+  async function _checkVersion() {
+    try {
+      const resp = await fetch(
+        'https://raw.githubusercontent.com/GuyMayer/SpotyTangoDisplay/main/version.txt',
+        { cache: 'no-cache' }
+      );
+      if (!resp.ok) return;
+      const remote = resp.text ? (await resp.text()).trim() : '';
+      if (!remote) return;
+
+      const local = CONFIG.app.version;
+      if (_compareVersions(remote, local) <= 0) return;
+
+      // Already dismissed this version this session?
+      if (sessionStorage.getItem('spotd_update_dismissed') === remote) return;
+
+      const overlay = document.getElementById('update-overlay');
+      const textEl  = document.getElementById('update-modal-text');
+      const titleEl = document.getElementById('update-modal-title');
+      if (!overlay || !textEl || !titleEl) return;
+
+      titleEl.textContent = 'v' + remote + ' Available';
+      textEl.textContent  = 'You are running v' + local + '. A newer version is available for download.';
+      overlay.classList.remove('hidden');
+
+      const dismissBtn = document.getElementById('update-modal-dismiss');
+      if (dismissBtn) {
+        dismissBtn.addEventListener('click', () => {
+          overlay.classList.add('hidden');
+          sessionStorage.setItem('spotd_update_dismissed', remote);
+        });
+      }
+    } catch { /* network unavailable — silent */ }
+  }
+
+  function _compareVersions(a, b) {
+    const pa = a.split('.').map(Number);
+    const pb = b.split('.').map(Number);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+      const da = pa[i] || 0;
+      const db = pb[i] || 0;
+      if (da > db) return 1;
+      if (da < db) return -1;
+    }
+    return 0;
+  }
+
   // ── Input source (Spotify / Live AudD) ───────────────────────────────
 
   function _loadSource() {
