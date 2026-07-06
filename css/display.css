@@ -153,6 +153,49 @@ html, body {
   margin-top: 8px;
 }
 
+/* ── Tanda sequence strip ─────────────────────────────────────── */
+
+#tanda-sequence {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  align-items: center;
+}
+
+.tanda-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: bold;
+  font-family: Georgia, serif;
+  border: 1px solid #444;
+  background: #1a1a1a;
+  color: #666;
+  transition: all 0.3s ease;
+}
+
+.tanda-pill.past {
+  opacity: 0.4;
+  color: #888;
+}
+
+.tanda-pill.current {
+  background: #c8a96e;
+  color: #000;
+  border-color: #c8a96e;
+  transform: scale(1.15);
+  box-shadow: 0 0 12px rgba(200, 169, 110, 0.5);
+}
+
+.tanda-pill.future {
+  color: #888;
+  border-color: #333;
+}
+
 /* ── Cortina overlay ──────────────────────────────────────────── */
 
 #cortina-screen {

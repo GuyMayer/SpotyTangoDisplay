@@ -39,6 +39,7 @@ const Display = (() => {
     trackGenre:       $('track-genre'),
     trackYear:    $('track-year'),
     tandaCounter: $('tanda-counter'),
+    tandaSequence:$('tanda-sequence'),
     trackNext:       $('track-next'),
     trackNextHeader: $('track-next-header'),
     trackNextDetail: $('track-next-detail'),
@@ -275,6 +276,40 @@ const Display = (() => {
     els.idleScreen.classList.remove('hidden');
   }
 
+  /**
+   * Render the tanda sequence strip: T T M T T V with current highlighted.
+   * Shown only in milonga mode with tanda format (not single).
+   */
+  function _renderTandaSequence(data, mode, format) {
+    if (!els.tandaSequence) return;
+
+    // Hide if not applicable
+    if (mode !== 'milonga' || format === 'single' ||
+        !data.tandaSequence || !data.tandaSequence.length ||
+        data.tandaSequenceIndex < 0) {
+      els.tandaSequence.classList.add('hidden');
+      els.tandaSequence.innerHTML = '';
+      return;
+    }
+
+    const seq   = data.tandaSequence;
+    const idx   = data.tandaSequenceIndex;
+    const GENRE_LETTER = { Tango: 'T', Milonga: 'M', Vals: 'V' };
+
+    els.tandaSequence.innerHTML = '';
+    seq.forEach((genre, i) => {
+      const pill = document.createElement('div');
+      pill.className = 'tanda-pill';
+      pill.textContent = GENRE_LETTER[genre] || '?';
+      if (i < idx)       pill.classList.add('past');
+      else if (i === idx) pill.classList.add('current');
+      else                pill.classList.add('future');
+      els.tandaSequence.appendChild(pill);
+    });
+
+    els.tandaSequence.classList.remove('hidden');
+  }
+
   function _renderTrack(data, mode, format) {
     format = format || 'tandas-cortinas';
     if (!_profile) { _renderIdle(data); return; }
@@ -313,6 +348,9 @@ const Display = (() => {
     } else {
       els.tandaCounter.style.display = 'none';
     }
+
+    // Tanda sequence strip (milonga mode only)
+    _renderTandaSequence(data, mode, format);
 
     // Next track / next tanda preview — hidden in single-track format
     format = data.format || format || 'tandas-cortinas';

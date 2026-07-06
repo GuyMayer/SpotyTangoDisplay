@@ -422,6 +422,15 @@ const Control = (() => {
       genre = genres && genres[0];
     }
 
+    // Tanda-type history for sequence display
+    // On cortina boundary: previous tanda is complete, push its genre to history
+    // On dance track: set current tanda genre
+    if (isCortina.isCortina) {
+      Tanda.recordTandaBoundary();
+    } else if (genre && showTanda) {
+      Tanda.setCurrentTandaGenre(genre);
+    }
+
     // Year: DB recording year > Spotify release year
     const year = dbResult.year || (track.album && track.album.release_date && track.album.release_date.slice(0, 4));
 
@@ -472,6 +481,20 @@ const Control = (() => {
       }
     }
 
+    // Build tanda sequence for display (rotation pattern + current position)
+    let tandaSequence = null, tandaSequenceIndex = -1, nextTandaGenre = null;
+    if (_format !== 'single' && _mode === 'milonga') {
+      const styleStr = localStorage.getItem('spotd_live_tanda_style') || 'TTMTTV';
+      const GENRE_MAP = { T: 'Tango', M: 'Milonga', V: 'Vals' };
+      const rotation = styleStr.split('').map(c => GENRE_MAP[c]).filter(Boolean);
+      if (rotation.length) {
+        const seq = Tanda.getSequence(rotation);
+        tandaSequence      = seq.sequence;
+        tandaSequenceIndex = seq.index;
+        nextTandaGenre     = seq.nextGenre;
+      }
+    }
+
     const payload = {
       mode: _mode,
       format: _format,
@@ -485,6 +508,9 @@ const Control = (() => {
       albumArt:  track.album && track.album.images && track.album.images[0] && track.album.images[0].url,
       tandaPosition: tandaPos && tandaPos.position,
       tandaTotal:    tandaPos && tandaPos.total,
+      tandaSequence,
+      tandaSequenceIndex,
+      nextTandaGenre,
       nextArtist,
       nextGenre,
       nextLabel,

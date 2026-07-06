@@ -120,6 +120,91 @@ const Tanda = (() => {
    */
   function reset() {
     sessionStorage.removeItem(STORAGE_HISTORY);
+    sessionStorage.removeItem(STORAGE_TANDA_TYPES);
+    _currentTandaGenre = null;
+  }
+
+  // ── Tanda-type history (for sequence display) ──────────────────────────────
+  // Tracks the genre of each completed tanda, so we can show dancers where they
+  // are in the rotation pattern (e.g. T T M T T V).
+
+  const STORAGE_TANDA_TYPES = 'spotd_tanda_types'; // sessionStorage: array of genres
+  let _currentTandaGenre = null;                    // genre of the currently-playing tanda
+
+  function _getTandaTypes() {
+    const stored = sessionStorage.getItem(STORAGE_TANDA_TYPES);
+    return stored ? JSON.parse(stored) : [];
+  }
+
+  function _saveTandaTypes(types) {
+    sessionStorage.setItem(STORAGE_TANDA_TYPES, JSON.stringify(types.slice(-50)));
+  }
+
+  /**
+   * Set the genre of the currently-playing tanda.
+   * Called on every track change with the detected genre.
+   * @param {string|null} genre - 'Tango' | 'Milonga' | 'Vals' | null
+   */
+  function setCurrentTandaGenre(genre) {
+    _currentTandaGenre = genre || null;
+  }
+
+  /**
+   * Called when a cortina is detected — the previous tanda is complete.
+   * Pushes the previous tanda's genre onto the history.
+   */
+  function recordTandaBoundary() {
+    if (_currentTandaGenre) {
+      const types = _getTandaTypes();
+      types.push(_currentTandaGenre);
+      _saveTandaTypes(types);
+    }
+    _currentTandaGenre = null;
+  }
+
+  /**
+   * Build the sequence display from tanda-type history + rotation pattern.
+   * @param {string[]} rotation - e.g. ['Tango','Tango','Milonga','Tango','Tango','Vals']
+   * @returns {{sequence: string[], index: number, nextGenre: string|null}}
+   *   sequence  - full rotation array (genres)
+   *   index     - 0-based index of current tanda in the rotation
+   *   nextGenre - predicted next tanda genre (rotation[index+1] or wrap)
+   */
+  function getSequence(rotation) {
+    if (!Array.isArray(rotation) || rotation.length === 0) {
+      return { sequence: [], index: -1, nextGenre: null };
+    }
+
+    const history = _getTandaTypes();   // completed tandas
+    const len = rotation.length;
+
+    // Find our position in the rotation by matching history against rotation
+    // Walk forward through rotation, consuming history entries that match.
+    let rotIdx = 0;
+    for (const histGenre of history) {
+      // Advance rotation index to next slot matching histGenre
+      for (let step = 1; step <= len; step++) {
+        const candidate = rotation[(rotIdx + step) % len];
+        if (candidate === histGenre) {
+          rotIdx = (rotIdx + step) % len;
+          break;
+        }
+      }
+    }
+
+    // Current tanda: if we have a current genre, advance to its slot
+    if (_currentTandaGenre) {
+      for (let step = 1; step <= len; step++) {
+        const candidate = rotation[(rotIdx + step) % len];
+        if (candidate === _currentTandaGenre) {
+          rotIdx = (rotIdx + step) % len;
+          break;
+        }
+      }
+    }
+
+    const nextGenre = rotation[(rotIdx + 1) % len] || null;
+    return { sequence: rotation.slice(), index: rotIdx, nextGenre };
   }
 
   return {
@@ -127,5 +212,8 @@ const Tanda = (() => {
     getPosition,
     onCortina,
     reset,
+    setCurrentTandaGenre,
+    recordTandaBoundary,
+    getSequence,
   };
 })();
