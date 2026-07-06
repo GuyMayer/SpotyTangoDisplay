@@ -221,8 +221,11 @@ const Wizard = (() => {
       </ol>
 
       <label class="wiz-label">Spotify Client ID
-        <input id="wiz-spotify-client-id" class="wiz-input" type="text"
-          placeholder="e.g. 1a2b3c4d5e6f..." value="${_esc(clientId)}" autocomplete="off">
+        <div style="display:flex;gap:4px">
+          <input id="wiz-spotify-client-id" class="wiz-input" type="password"
+            placeholder="e.g. 1a2b3c4d5e6f..." value="${_esc(clientId)}" autocomplete="off" style="flex:1">
+          <button type="button" id="wiz-spotify-toggle" class="wiz-btn ghost small" title="Show/hide">👁</button>
+        </div>
       </label>
       <div id="wiz-dashboard-link-row" class="wiz-hint" style="margin-bottom:12px;display:${clientId ? 'block' : 'none'}">
         <a id="wiz-dashboard-link" href="https://developer.spotify.com/dashboard/${_esc(clientId)}" target="_blank" rel="noopener">
@@ -400,7 +403,10 @@ const Wizard = (() => {
       </ol>
       <p class="wiz-hint" style="color:#ff9800">Free tier: 300 requests/month ≈ 2.5 hours of a milonga (at 30s intervals).</p>
       <label class="wiz-label">AudD API Token
-        <input id="wiz-audd-key" class="wiz-input" type="text" placeholder="test (or your token)" value="${_esc(existingKey)}" autocomplete="off">
+        <div style="display:flex;gap:4px">
+          <input id="wiz-audd-key" class="wiz-input" type="password" placeholder="test (or your token)" value="${_esc(existingKey)}" autocomplete="off" style="flex:1">
+          <button type="button" id="wiz-audd-toggle" class="wiz-btn ghost small" title="Show/hide">👁</button>
+        </div>
       </label>
       <div id="wiz-audd-status" class="wiz-status"></div>
       <button id="wiz-audd-test" class="wiz-btn secondary">Test (record 4s → identify)</button>
@@ -408,6 +414,15 @@ const Wizard = (() => {
 
     document.getElementById('wiz-audd-test').addEventListener('click', async () => {
       const keyInput = document.getElementById('wiz-audd-key');
+      // Show/hide toggle
+      const auddToggle = document.getElementById('wiz-audd-toggle');
+      if (auddToggle && keyInput) {
+        auddToggle.addEventListener('click', () => {
+          const isPw = keyInput.type === 'password';
+          keyInput.type = isPw ? 'text' : 'password';
+          auddToggle.textContent = isPw ? '🙈' : '👁';
+        });
+      }
       const statusEl = document.getElementById('wiz-audd-status');
       const key = keyInput.value.trim();
       if (!key) { statusEl.textContent = '\u2717 Enter a token first'; statusEl.className = 'wiz-status error'; return; }
@@ -469,7 +484,10 @@ const Wizard = (() => {
       </div>
       <p class="wiz-hint">Wikipedia fallback works without a key for well-known songs.</p>
       <label class="wiz-label">Last.fm API Key
-        <input id="wiz-lastfm-key" class="wiz-input" type="text" placeholder="e.g. a1b2c3d4e5f6..." value="${_esc(existingKey)}" autocomplete="off">
+        <div style="display:flex;gap:4px">
+          <input id="wiz-lastfm-key" class="wiz-input" type="password" placeholder="e.g. a1b2c3d4e5f6..." value="${_esc(existingKey)}" autocomplete="off" style="flex:1">
+          <button type="button" id="wiz-lastfm-toggle" class="wiz-btn ghost small" title="Show/hide">👁</button>
+        </div>
       </label>
       <div id="wiz-lastfm-status" class="wiz-status"></div>
       <button id="wiz-lastfm-test" class="wiz-btn secondary">Test (La Cumparsita by Rodríguez)</button>
@@ -477,6 +495,17 @@ const Wizard = (() => {
 
     document.getElementById('wiz-lastfm-test').addEventListener('click', async () => {
       const input   = document.getElementById('wiz-lastfm-key');
+      if (input) {
+        // Show/hide toggle
+        const lfmToggle = document.getElementById('wiz-lastfm-toggle');
+        if (lfmToggle) {
+          lfmToggle.addEventListener('click', () => {
+            const isPw = input.type === 'password';
+            input.type = isPw ? 'text' : 'password';
+            lfmToggle.textContent = isPw ? '🙈' : '👁';
+          });
+        }
+      }
       const statusEl = document.getElementById('wiz-lastfm-status');
       const key = input.value.trim();
       statusEl.textContent = 'Looking up…'; statusEl.className = 'wiz-status';
@@ -531,7 +560,10 @@ const Wizard = (() => {
       </ol>
       <p class="wiz-hint">Free models available — no credit card required for basic use.</p>
       <label class="wiz-label">OpenRouter API Key
-        <input id="wiz-openrouter-key" class="wiz-input" type="text" placeholder="sk-or-v1-..." value="${_esc(existingKey)}" autocomplete="off">
+        <div style="display:flex;gap:4px">
+          <input id="wiz-openrouter-key" class="wiz-input" type="password" placeholder="sk-or-v1-..." value="${_esc(existingKey)}" autocomplete="off" style="flex:1">
+          <button type="button" id="wiz-openrouter-toggle" class="wiz-btn ghost small" title="Show/hide">👁</button>
+        </div>
       </label>
       <div id="wiz-openrouter-status" class="wiz-status"></div>
       <button id="wiz-openrouter-test" class="wiz-btn secondary">Test</button>
@@ -539,6 +571,17 @@ const Wizard = (() => {
 
     document.getElementById('wiz-openrouter-test').addEventListener('click', async () => {
       const input   = document.getElementById('wiz-openrouter-key');
+      if (input) {
+        // Show/hide toggle
+        const orToggle = document.getElementById('wiz-openrouter-toggle');
+        if (orToggle) {
+          orToggle.addEventListener('click', () => {
+            const isPw = input.type === 'password';
+            input.type = isPw ? 'text' : 'password';
+            orToggle.textContent = isPw ? '🙈' : '👁';
+          });
+        }
+      }
       const statusEl = document.getElementById('wiz-openrouter-status');
       const key = input.value.trim();
       if (!key) { statusEl.textContent = '\u2717 Enter a key first'; statusEl.className = 'wiz-status error'; return; }
