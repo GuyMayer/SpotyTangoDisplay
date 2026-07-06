@@ -2,6 +2,31 @@
 
 All notable changes to SpotyTangoDisplay are documented here.
 
+## [1.3.0] — 2026-07-06
+
+### Added
+
+- **Milonga sequence position display.** Shows dancers where they are in the tanda rotation: a visual strip of pills (T T M T T V) with the current tanda highlighted in gold. Past tandas fade, future tandas dim. Reuses the existing rotation pattern setting. Updates live as tandas complete.
+- **Auto-advance on cortina.** When a cortina starts, automatically skip to the next track after a configurable delay (default 60s). Persists in localStorage. Track-ID guard prevents stale skips if the DJ manually skips mid-cortina. Timer restarts when delay setting changes.
+- **Living master DB.** Display downloads the latest tango DB from GitHub once per day (version-checked). Local additions (DJ-added tracks with type/year/singer) merge on top. New "Track Database" card in the control panel for adding tracks and contributing back to the master.
+- **Singer data in tango-db.json.** 10,078 of 20,259 entries (49.7%) now ship with singer data — 5,565 precise per-track matches from el-recodo.csv + 4,513 orchestra-level data from orchestras.json. Display and control panel now show singer where available.
+- **POST /contribute endpoint.** Relay accepts local additions from the control panel, merges into `data/local-additions.json` for master DB inclusion. 64KB body limit, never overwrites existing entries.
+- **Venue hardware kit.** Captive portal HTML, QR code generator script (`tools/make-qr.py` — generates WiFi + direct URL QRs), TangoPassion logo SVG placeholder.
+- **Smoke test suite.** 11 end-to-end tests for relay.js (ping, HTML serving, SSE, push/broadcast, last-state replay, 404, path traversal 403, CORS, /contribute). Runs in CI on every push via `.github/workflows/test.yml`.
+- **Offline-first singer enrichment script.** `tools/enrich-tango-db.py` with `--no-csv` mode (orchestras.json fallback, 45% coverage offline), `--local` flag for merging local additions, auto-bumps `tango-db-version.txt`.
+
+### Changed
+
+- **Custom domain.** `CNAME` file added for `display.tangopassion.co.uk`. DNS record + GitHub domain verification required separately. Existing `guymayer.github.io/SpotyTangoDisplay/` URL continues to work.
+- **HTTP-Referer dynamic.** All OpenRouter API calls (orchestra bios, title translation, song stories) now use `window.location.origin` instead of a hardcoded GitHub Pages URL. Works correctly on custom domain without code changes.
+- **Spotify OAuth scope.** Added `user-modify-playback-state` (required for auto-advance skip feature). Existing users must re-authorize to grant the new scope.
+
+### Fixed
+
+- **Tray update-checker URL** now points to `display.tangopassion.co.uk/download.html` instead of the old GitHub Pages URL.
+
+---
+
 ## [1.2.0] — 2026-05-05
 
 ### Added

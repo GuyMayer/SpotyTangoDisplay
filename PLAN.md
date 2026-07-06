@@ -1,6 +1,6 @@
-````````````````````````````````````````````# SpotyTangoDisplay — Project Plan
+# SpotyTangoDisplay — Project Plan
 
-> **Version:** 1.2.0 | **Updated:** 2026-07-06 | **126 commits**
+> **Version:** 1.3.0 | **Updated:** 2026-07-06 | **126+ commits**
 > **Live:** <https://guymayer.github.io/SpotyTangoDisplay/>
 
 ## What It Is
@@ -351,7 +351,7 @@ Generate: `pip install qrcode[pil] && python3 -c "import qrcode; qrcode.make('WI
 
 ## Feature Status (as of 2026-07-06)
 
-### Done (v1.2.0)
+### Done (v1.3.0)
 
 - [x] Spotify PKCE OAuth + polling + genre cache
 - [x] Local relay (HTTP + SSE, Node.js, zero deps)
@@ -372,25 +372,30 @@ Generate: `pip install qrcode[pil] && python3 -c "import qrcode; qrcode.make('WI
 - [x] Settings backup/restore (full export of all keys)
 - [x] Next track / tanda preview on display
 - [x] macOS/Linux launcher (`start.sh`)
+- [x] **Auto-advance on cortina** — configurable delay (default 60s), skips to next track automatically
+- [x] **Milonga sequence position display** — visual pill strip (T T M T T V) with current tanda highlighted
+- [x] **Singer data in tango-db.json** — 49.7% coverage (10,078/20,259 entries), ships pre-enriched
+- [x] **Living master DB** — daily remote update check, local additions merge on top, contribute back via relay
+- [x] **Track Database card** — add/correct tracks locally, contribute to master DB
+- [x] **POST /contribute endpoint** — relay merges local additions into `data/local-additions.json`
+- [x] **Smoke test suite** — 11 end-to-end tests, runs in CI on every push
+- [x] **Venue hardware kit** — captive portal HTML, QR code generator, logo placeholder
+- [x] **Offline-first enrichment script** — `--no-csv` mode (orchestras.json fallback), `--local` flag
+- [x] **Custom domain ready** — CNAME for `display.tangopassion.co.uk`, dynamic HTTP-Referer
 
 ### Remaining Work
 
 #### Software
 
-- [ ] **tango-db.json enrichment** — Python script to add singer `s` field from
-  elrecodo.csv (~8k of 20k entries)
-- [ ] **Custom domain** — `display.tangopassion.co.uk` CNAME + DNS + Spotify
-  redirect URI update
-- [ ] **TangoPassion logo** — add brand logo to `assets/`
-- [ ] **Smoke test / QA checklist** — end-to-end test with two browsers
+- [ ] **Custom domain DNS** — `display.tangopassion.co.uk` DNS A record → GitHub Pages IPs (CNAME file already in repo)
+- [ ] **GitHub domain verification** — manual step in GitHub account settings
+- [ ] **TangoPassion logo** — replace SVG placeholder with real brand logo
 - [ ] **Non-Chrome browser validation** — Firefox display testing
+- [ ] **Spotify re-authorization prompt** — existing users need to re-login to grant `user-modify-playback-state` scope for auto-advance
 
 #### Venue Kit
 
-- [ ] **QR code generator script** — automate PNG generation in repo
-- [ ] **Captive portal HTML** — lightweight redirect page on router
-- [ ] **Kit packing checklist** — laminated card: what's in the case, setup
-  steps, troubleshooting
+- [ ] **Kit packing checklist** — laminated card: what's in the case, setup steps, troubleshooting
 - [ ] **Acquire hardware** — order router + TV stick
 - [ ] **Router config doc** — step-by-step GL.iNet config with screenshots
 - [ ] **Field test** — deploy at a real milonga
@@ -449,13 +454,13 @@ Generate: `pip install qrcode[pil] && python3 -c "import qrcode; qrcode.make('WI
 
 ### Next Build Order (prioritised)
 
-1. TangoPassion logo asset
-2. Custom domain (`display.tangopassion.co.uk`)
-3. Venue kit — acquire hardware, router config, QR script, captive portal
-4. Venue kit — field test at a real milonga
-5. tango-db.json singer field enrichment
-6. Smoke test / QA checklist
-7. Non-Chrome browser validation
+1. TangoPassion logo — replace SVG placeholder with real brand logo
+2. Custom domain DNS — point `display.tangopassion.co.uk` to GitHub Pages
+3. GitHub domain verification — manual step in account settings
+4. Venue kit — acquire hardware, write router config doc, packing checklist
+5. Venue kit — field test at a real milonga
+6. Non-Chrome browser validation — Firefox display testing
+7. Periodic re-run of `tools/enrich-tango-db.py` to refresh singer data when el-recodo source updates
 
 ---
 
