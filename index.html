@@ -93,16 +93,16 @@
 
       <!-- Dance type override -->
       <div class="card">
-        <div class="card-title">Dance Type <span id="dance-override-badge" class="dance-override-badge">Auto</span></div>
+        <div class="card-title">Dance Type <span id="dance-override-badge" class="dance-override-badge">DB</span></div>
         <select id="dance-override-select">
-          <option value="">Auto-detect from Spotify</option>
-          <option value="db">From database (el-recodo)</option>
+          <option value="db">From database</option>
+          <option value="">Auto-detect (Spotify)</option>
           <option value="none">None (hide genre)</option>
           <option value="Tango">Tango</option>
           <option value="Milonga">Milonga</option>
           <option value="Vals">Vals</option>
         </select>
-        <p style="font-size:11px;color:var(--text-muted);margin-top:8px">Override the genre shown on the display screen. Auto-detect uses Spotify artist genres.</p>
+        <p style="font-size:11px;color:var(--text-muted);margin-top:8px">Genre (Tango/Milonga/Vals) is determined from the local tango database. Spotify artist name and track title are always used.</p>
       </div>
 
       <!-- Now playing -->
@@ -206,7 +206,10 @@
 
         <!-- Add track form -->
         <div id="local-track-form" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
-          <input id="lt-title"  class="lt-input" type="text" placeholder="Track title" autocomplete="off">
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="lt-title"  class="lt-input" type="text" placeholder="Track title" autocomplete="off" style="flex:1">
+            <button id="lt-load-btn" class="btn" title="Load currently playing track" style="white-space:nowrap;font-size:12px">🎵 Load Playing</button>
+          </div>
           <input id="lt-artist" class="lt-input" type="text" placeholder="Orchestra / artist" autocomplete="off">
           <div style="display:flex;gap:6px">
             <select id="lt-type" class="lt-input" style="flex:1">

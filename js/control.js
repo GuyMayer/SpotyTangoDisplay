@@ -408,18 +408,16 @@ const Control = (() => {
     const artistName = track.artists && track.artists[0] && track.artists[0].name;
     const dbResult = await TangoDB.lookup(track.name, artistName, track.id);
 
-    // Resolve genre: manual override > DB type > Spotify artist genre
+    // Resolve genre: manual override > DB type > (never Spotify — unreliable)
     let genre;
     if (_danceOverride === 'none') {
       genre = null;
-    } else if (_danceOverride === 'db') {
-      genre = dbResult.type || null;  // DB only, no Spotify fallback
     } else if (_danceOverride) {
-      genre = _danceOverride;
-    } else if (dbResult.type) {
-      genre = dbResult.type;
+      // Manual override (Tango/Milonga/Vals) or 'db' mode
+      genre = _danceOverride === 'db' ? (dbResult.type || null) : _danceOverride;
     } else {
-      genre = genres && genres[0];
+      // Legacy '' (Auto) — DB first, no Spotify fallback
+      genre = dbResult.type || null;
     }
 
     // Tanda-type history for sequence display
@@ -725,7 +723,8 @@ const Control = (() => {
   // ── Dance type override ───────────────────────────────────────────────────
 
   function _loadDanceOverride() {
-    _danceOverride = localStorage.getItem('spotd_dance_override') || '';
+    _danceOverride = localStorage.getItem('spotd_dance_override') || 'db';
+    if (_danceOverride === '') _danceOverride = 'db';  // migrate old Auto users to DB default
     const sel = document.getElementById('dance-override-select');
     if (sel) sel.value = _danceOverride;
     _updateDanceOverrideBadge();
@@ -1146,6 +1145,7 @@ const Control = (() => {
 
   function _bindLocalTrackDB() {
     const addBtn      = document.getElementById('lt-add-btn');
+    const loadBtn     = document.getElementById('lt-load-btn');
     const contribBtn  = document.getElementById('lt-contribute-btn');
     const countEl     = document.getElementById('lt-count');
     const statusEl    = document.getElementById('lt-status');
@@ -1157,6 +1157,41 @@ const Control = (() => {
       if (countEl) countEl.textContent = n + ' local addition' + (n === 1 ? '' : 's');
     }
     _refreshCount();
+
+    // Load currently playing track into the add form
+    if (loadBtn) {
+      loadBtn.addEventListener('click', () => {
+        if (!_lastTrack || !_lastTrack.track) {
+          if (addStatus) addStatus.textContent = 'No track playing.';
+          return;
+        }
+        const track   = _lastTrack.track;
+        const titleEl = document.getElementById('lt-title');
+        const artEl   = document.getElementById('lt-artist');
+        const typeEl  = document.getElementById('lt-type');
+        const yearEl  = document.getElementById('lt-year');
+
+        if (titleEl) titleEl.value = track.name || '';
+        if (artEl)   artEl.value   = (track.artists && track.artists[0] && track.artists[0].name) || '';
+
+        // Pre-fill type from current detection
+        if (typeEl && _currentDetectedType && _currentDetectedType !== 'Cortina') {
+          typeEl.value = _currentDetectedType;
+        }
+
+        // Pre-fill year if known
+        if (yearEl) {
+          const y = (track.album && track.album.release_date && track.album.release_date.slice(0, 4)) || '';
+          yearEl.value = y;
+        }
+
+        if (addStatus) {
+          addStatus.textContent = '✓ Loaded: ' + (track.name || '') + ' / ' +
+            ((track.artists && track.artists[0] && track.artists[0].name) || '');
+          setTimeout(() => { addStatus.textContent = ''; }, 3000);
+        }
+      });
+    }
 
     if (addBtn) {
       addBtn.addEventListener('click', () => {
