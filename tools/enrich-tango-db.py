@@ -2,25 +2,31 @@
 """
 enrich-tango-db.py — Add singer field to data/tango-db.json
 
-Two complementary enrichment modes, run in order:
+Three complementary enrichment modes, run in order:
 
-  1. CSV mode (precise, per-track):
+  1. Local additions (highest priority, per-track):
+     Reads data/local-additions.json (saved by relay POST /contribute).
+     Applies all fields (t, y, s) to matched DB keys. Use --local PATH to
+     specify a different file.
+
+  2. CSV mode (precise, per-track):
      Downloads elrecodo.csv from galanakis/tangomusicdb (or reads a local copy)
      and adds "s": "Singer Name" to each matched entry.
-     Skip this mode with --no-csv, or it is skipped automatically if download
-     fails and no local file is provided.
+     Skip with --no-csv, or skipped automatically if download fails.
 
-  2. Orchestra fallback (offline, always available):
+  3. Orchestra fallback (offline, always available):
      Reads data/orchestras.json and fills remaining gaps using the orchestra's
-     notable_singers list. Useful when running offline — covers the ~25
-     prominent orchestras that account for most of the DB.
+     notable_singers list. Covers the ~25 prominent orchestras.
      Disable with --no-fallback.
 
 Usage:
-    python3 tools/enrich-tango-db.py            # try CSV, fill gaps from local data
-    python3 tools/enrich-tango-db.py --no-csv   # offline only (orchestras.json)
-    python3 tools/enrich-tango-db.py --csv /path/to/elrecodo.csv  # local CSV file
+    python3 tools/enrich-tango-db.py            # full pipeline
+    python3 tools/enrich-tango-db.py --no-csv   # offline only
+    python3 tools/enrich-tango-db.py --local data/local-additions.json
     python3 tools/enrich-tango-db.py --dry-run  # preview, no writes
+
+After merging, bump data/tango-db-version.txt (integer) so browsers
+know to download the updated DB.
 
 The script is idempotent. It never overwrites an existing "s" value.
 A .bak of tango-db.json is written before any changes.
@@ -208,12 +214,72 @@ def enrich_from_orchestras(db, orch_lookup, dry_run=False):
     return filled
 
 
+# ── Local additions mode ──────────────────────────────────────────────────────
+
+def enrich_from_local(db, local_path, dry_run=False):
+    """
+    Apply local-additions.json entries to db.
+    Local additions are keyed by normalised "title|orchestra" and carry the
+    same field format as the DB ({t, y, s}) plus metadata (added, by).
+    They take priority: all fields present in the local entry are applied.
+    Returns number of entries applied.
+    """
+    if not os.path.exists(local_path):
+        print(f"  Local additions file not found: {local_path}")
+        return 0
+
+    with open(local_path, encoding="utf-8") as fh:
+        local = json.load(fh)
+
+    if not isinstance(local, dict):
+        print(f"  WARNING: {local_path} is not a JSON object — skipping.")
+        return 0
+
+    applied = 0
+    for key, entry in local.items():
+        if not isinstance(entry, dict):
+            continue
+        existing = db.get(key, {})
+        merged = dict(existing)
+        # Apply DB-relevant fields (skip metadata like 'added', 'by')
+        for field in ("t", "y", "s"):
+            if entry.get(field):
+                merged[field] = entry[field]
+        if merged != existing:
+            if not dry_run:
+                db[key] = merged
+            applied += 1
+
+    print(f"  Local additions applied: {applied} entries "
+          f"({len(local)} in file, {len(local) - applied} already matched)")
+    return applied
+
+
+def bump_version(db_path, dry_run=False):
+    """Increment data/tango-db-version.txt integer."""
+    ver_path = os.path.join(os.path.dirname(db_path), "tango-db-version.txt")
+    try:
+        current = int(open(ver_path).read().strip())
+    except Exception:
+        current = 1
+    new_ver = current + 1
+    if not dry_run:
+        with open(ver_path, "w") as fh:
+            fh.write(str(new_ver) + "\n")
+    print(f"\nVersion: {current} → {new_ver}"
+          + (" (dry-run, not written)" if dry_run else f"  ({ver_path})"))
+    return new_ver
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(
         description="Enrich tango-db.json with singer data"
     )
+    parser.add_argument("--local", metavar="PATH",
+                        help="Path to local-additions.json from relay /contribute "
+                             "(default: data/local-additions.json if it exists)")
     parser.add_argument("--csv", metavar="PATH",
                         help="Path to local elrecodo.csv (tries GitHub download if omitted)")
     parser.add_argument("--no-csv", action="store_true",
@@ -242,9 +308,25 @@ def main():
     print(f"  {total:,} entries  ({already:,} already have singer, "
           f"{total - already:,} need filling)")
 
-    csv_matched  = 0
-    orch_filled  = 0
-    tmp_csv_path = None
+    local_applied = 0
+    csv_matched   = 0
+    orch_filled   = 0
+    tmp_csv_path  = None
+
+    # ── Mode 0: Local additions (highest priority) ────────────────────────────
+    local_path = args.local
+    if not local_path:
+        default_local = os.path.join(os.path.dirname(db_path), "local-additions.json")
+        if os.path.exists(default_local):
+            local_path = default_local
+
+    if local_path:
+        print(f"\n── Local additions mode ──")
+        print(f"  File: {os.path.abspath(local_path)}")
+        local_applied = enrich_from_local(db, os.path.abspath(local_path),
+                                          dry_run=args.dry_run)
+    else:
+        print("\n── No local additions file found ──")
 
     # ── Mode 1: CSV ───────────────────────────────────────────────────────────
     if not args.no_csv:
@@ -287,9 +369,10 @@ def main():
         print("\n── Orchestra fallback skipped (--no-fallback) ──")
 
     # ── Summary ───────────────────────────────────────────────────────────────
-    total_new  = csv_matched + orch_filled
+    total_new  = local_applied + csv_matched + orch_filled
     total_with = already + total_new
     print(f"\n── Summary ──")
+    print(f"  Local additions : {local_applied:,}")
     print(f"  CSV matches     : {csv_matched:,}")
     print(f"  Fallback fills  : {orch_filled:,}")
     print(f"  Already had 's' : {already:,}")
@@ -298,6 +381,7 @@ def main():
           f"({100 * total_with / total:.1f}%)")
 
     if args.dry_run:
+        bump_version(db_path, dry_run=True)
         print("\n[dry-run] No files written.")
         return
 
@@ -314,6 +398,7 @@ def main():
         json.dump(db, fh, ensure_ascii=False, separators=(",", ":"))
 
     print(f"Written: {db_path}  ({os.path.getsize(db_path):,} bytes)")
+    bump_version(db_path)
 
     # Cleanup temp download
     if tmp_csv_path and os.path.exists(tmp_csv_path):

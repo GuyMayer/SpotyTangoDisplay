@@ -88,6 +88,47 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (req.method === 'POST' && req.url === '/contribute') {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk;
+      if (body.length > 65536) { req.destroy(); return; }
+    });
+    req.on('end', () => {
+      let incoming;
+      try { incoming = JSON.parse(body); } catch {
+        res.writeHead(400, { 'Content-Type': 'application/json' }).end('{"error":"Invalid JSON"}');
+        return;
+      }
+      if (typeof incoming !== 'object' || Array.isArray(incoming)) {
+        res.writeHead(400, { 'Content-Type': 'application/json' }).end('{"error":"Expected object"}');
+        return;
+      }
+
+      const dest = path.join(ROOT, 'data', 'local-additions.json');
+      let existing = {};
+      try { existing = JSON.parse(fs.readFileSync(dest, 'utf8')); } catch { /* first write */ }
+
+      // Merge: incoming entries extend existing (never overwrite existing)
+      let added = 0;
+      for (const [key, val] of Object.entries(incoming)) {
+        if (!existing[key]) { existing[key] = val; added++; }
+      }
+
+      fs.writeFile(dest, JSON.stringify(existing, null, 2), err => {
+        if (err) {
+          console.error('[relay] /contribute write error:', err.message);
+          res.writeHead(500, { 'Content-Type': 'application/json' }).end('{"error":"Write failed"}');
+          return;
+        }
+        console.log('[relay] /contribute: ' + added + ' new entries saved to data/local-additions.json');
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+          .end(JSON.stringify({ ok: true, added, total: Object.keys(existing).length }));
+      });
+    });
+    return;
+  }
+
   // -- Static file server ---------------------------------------------------
 
   let urlPath = req.url.split('?')[0];  // strip query string

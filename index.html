@@ -181,6 +181,40 @@
         <div id="settings-import-status" style="font-size:12px;margin-top:8px;color:#c9a96e"></div>
       </div>
 
+      <!-- Track Database -->
+      <div class="card">
+        <div class="card-title">Track Database</div>
+        <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px">
+          Add missing tracks or correct type/singer data. Stored locally and
+          optionally contributed to the master database.
+        </p>
+
+        <!-- Add track form -->
+        <div id="local-track-form" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+          <input id="lt-title"  class="lt-input" type="text" placeholder="Track title" autocomplete="off">
+          <input id="lt-artist" class="lt-input" type="text" placeholder="Orchestra / artist" autocomplete="off">
+          <div style="display:flex;gap:6px">
+            <select id="lt-type" class="lt-input" style="flex:1">
+              <option value="">Type…</option>
+              <option value="Tango">Tango</option>
+              <option value="Milonga">Milonga</option>
+              <option value="Vals">Vals</option>
+            </select>
+            <input id="lt-year"   class="lt-input" type="text" placeholder="Year" maxlength="4" style="width:70px">
+          </div>
+          <input id="lt-singer" class="lt-input" type="text" placeholder="Singer (optional)" autocomplete="off">
+          <button id="lt-add-btn" class="btn">+ Add Track</button>
+          <div id="lt-add-status" style="font-size:12px;color:var(--accent);min-height:16px"></div>
+        </div>
+
+        <!-- Local additions list + contribute -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span id="lt-count" style="font-size:12px;color:var(--text-muted)">0 local additions</span>
+          <button id="lt-contribute-btn" class="btn" title="Send local additions to the relay for master DB inclusion">📤 Contribute</button>
+        </div>
+        <div id="lt-status" style="font-size:12px;color:var(--accent);min-height:16px"></div>
+      </div>
+
     </div>
 
   </main>

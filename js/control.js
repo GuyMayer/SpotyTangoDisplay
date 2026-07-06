@@ -108,6 +108,7 @@ const Control = (() => {
     _loadSource();
     _bindSourceToggle();
     _bindSettingsBackup();
+    _bindLocalTrackDB();
 
     _startSpotify();
     _startPusher();
@@ -989,8 +990,99 @@ const Control = (() => {
     'spotd_source', 'spotd_autogen_stories', 'spotd_live_tanda_size', 'spotd_live_tanda_style',
     'spotd_profiles', 'spotd_active_profile', 'spotd_story_overrides', 'spotd_track_types',
     'spotd_cortina_playlist', 'spotd_cortina_tracks', 'spotd_orchestra_cache',
-    'spotd_relay_mode', 'spotd_local_host',
+    'spotd_relay_mode', 'spotd_local_host', 'spotd_local_tracks',
   ];
+
+  // ── Track Database card (local additions + contribute) ────────────────────
+
+  function _bindLocalTrackDB() {
+    const addBtn      = document.getElementById('lt-add-btn');
+    const contribBtn  = document.getElementById('lt-contribute-btn');
+    const countEl     = document.getElementById('lt-count');
+    const statusEl    = document.getElementById('lt-status');
+    const addStatus   = document.getElementById('lt-add-status');
+
+    function _refreshCount() {
+      const tracks = typeof TangoDB !== 'undefined' ? TangoDB.getLocalTracks() : {};
+      const n = Object.keys(tracks).length;
+      if (countEl) countEl.textContent = n + ' local addition' + (n === 1 ? '' : 's');
+    }
+    _refreshCount();
+
+    if (addBtn) {
+      addBtn.addEventListener('click', () => {
+        const title  = (document.getElementById('lt-title')  || {}).value || '';
+        const artist = (document.getElementById('lt-artist') || {}).value || '';
+        const type   = (document.getElementById('lt-type')   || {}).value || '';
+        const year   = (document.getElementById('lt-year')   || {}).value || '';
+        const singer = (document.getElementById('lt-singer') || {}).value || '';
+
+        if (!title.trim() || !artist.trim()) {
+          if (addStatus) { addStatus.textContent = '✗ Title and artist are required.'; }
+          return;
+        }
+
+        if (typeof TangoDB !== 'undefined') {
+          TangoDB.addLocalTrack(title, artist, { type, year, singer });
+        }
+
+        // Clear form
+        ['lt-title','lt-artist','lt-year','lt-singer'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = '';
+        });
+        const typeEl = document.getElementById('lt-type');
+        if (typeEl) typeEl.value = '';
+
+        if (addStatus) {
+          addStatus.textContent = '✓ Added: ' + title.trim() + ' / ' + artist.trim();
+          setTimeout(() => { addStatus.textContent = ''; }, 3000);
+        }
+        _refreshCount();
+      });
+    }
+
+    if (contribBtn) {
+      contribBtn.addEventListener('click', async () => {
+        const tracks = typeof TangoDB !== 'undefined' ? TangoDB.getLocalTracks() : {};
+        if (Object.keys(tracks).length === 0) {
+          if (statusEl) statusEl.textContent = 'No local additions to contribute.';
+          return;
+        }
+
+        contribBtn.disabled = true;
+        if (statusEl) statusEl.textContent = 'Sending…';
+
+        const isLocal = window.location.hostname === '127.0.0.1' ||
+                        window.location.hostname === 'localhost';
+        if (!isLocal) {
+          if (statusEl) statusEl.textContent =
+            '✗ Contribute only works when running via the local relay (127.0.0.1:3456).';
+          contribBtn.disabled = false;
+          return;
+        }
+
+        try {
+          const resp = await fetch(window.location.origin + '/contribute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(tracks),
+          });
+          const data = await resp.json();
+          if (resp.ok && data.ok) {
+            if (statusEl) statusEl.textContent =
+              '✓ ' + data.added + ' new entries saved to data/local-additions.json' +
+              ' (total: ' + data.total + ')';
+          } else {
+            if (statusEl) statusEl.textContent = '✗ ' + (data.error || 'Server error');
+          }
+        } catch (err) {
+          if (statusEl) statusEl.textContent = '✗ Relay not reachable: ' + err.message;
+        }
+        contribBtn.disabled = false;
+      });
+    }
+  }
 
   function _bindSettingsBackup() {
     const exportBtn  = document.getElementById('settings-export-btn');

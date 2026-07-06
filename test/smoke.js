@@ -244,6 +244,20 @@ async function runTests() {
     assert.strictEqual(r.status, 204);
     assert.ok(r.headers['access-control-allow-origin']);
   });
+
+  // 11. POST /contribute saves local additions
+  await test('POST /contribute → 200 {ok, added, total}', async () => {
+    const payload = JSON.stringify({
+      'bahia blanca|carlos di sarli': { t: 'T', y: '1947', s: 'Jorge Durán',
+                                         added: '2026-07-06', by: 'Test' },
+    });
+    const r = await req('POST', `${BASE}/contribute`, payload);
+    assert.strictEqual(r.status, 200);
+    const body = JSON.parse(r.body);
+    assert.ok(body.ok);
+    assert.strictEqual(typeof body.added, 'number');
+    assert.strictEqual(typeof body.total, 'number');
+  });
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────

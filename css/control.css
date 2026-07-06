@@ -805,3 +805,19 @@ pre.wiz-code { display: block; padding: 10px 14px; margin: 8px 0; white-space: p
 #wizard-coffee-btn:hover { text-decoration: underline; }
 
 .hidden { display: none !important; }
+
+/* ── Track Database card ──────────────────────────────────────────────────── */
+
+.lt-input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.lt-input:focus { outline: none; border-color: var(--accent); }
