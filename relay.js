@@ -159,9 +159,10 @@ function _printUrls(port) {
   const nets = os.networkInterfaces();
   console.log('\nSpotyTangoDisplay Local Relay  (port ' + port + ')');
   console.log('-'.repeat(50));
-  console.log('Open the DJ control app on THIS laptop:');
+  console.log('Control panel (this laptop):');
   console.log('  http://127.0.0.1:' + port + '/');
-  console.log('\nOpen the display screen on the dancer TV / another device:');
+  console.log('  http://tangodisplay.local:' + port + '/   ← after hosts setup');
+  console.log('\nDancer display (TV / another device):');
   for (const addrs of Object.values(nets)) {
     for (const addr of addrs) {
       if (addr.family === 'IPv4' && !addr.internal) {
@@ -169,8 +170,10 @@ function _printUrls(port) {
       }
     }
   }
-  console.log('\n[!] Register this as your Spotify redirect URI:');
+  console.log('\nSpotify redirect URI:');
   console.log('   http://127.0.0.1:' + port + '/');
+  console.log('\n💡 Tip: add "127.0.0.1  tangodisplay.local" to your hosts');
+  console.log('   file and open http://tangodisplay.local:' + port + '/ instead.');
   console.log('\nWaiting for connections...\n');
 }
 
