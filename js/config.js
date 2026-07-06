@@ -11,7 +11,7 @@ const CONFIG = {
     pollIntervalPaused: 5000,    // ms when paused/idle
   },
   app: {
-    version: '1.4.0',
+    version: '1.4.1',
     brand: 'TangoPassion',
     storagePrefix: 'spotd_',
   },
