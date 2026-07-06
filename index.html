@@ -76,6 +76,21 @@
         <p style="font-size:11px;color:var(--text-muted);margin-top:8px">Tandas are groups of 3–4 tracks separated by a cortina.</p>
       </div>
 
+      <!-- Auto-Advance -->
+      <div class="card">
+        <div class="card-title">Auto-Advance</div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="auto-advance-enabled">
+          <span>Skip to next track after cortina</span>
+        </label>
+        <div id="auto-advance-seconds-row" style="margin-top:8px;display:none;align-items:center;gap:6px">
+          <label for="auto-advance-seconds" style="font-size:12px;color:var(--text-muted)">Delay (seconds):</label>
+          <input type="number" id="auto-advance-seconds" min="5" max="600" value="60" style="width:70px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 6px;font-size:12px">
+        </div>
+        <p style="font-size:11px;color:var(--text-muted);margin-top:8px">When a cortina starts, automatically skip to the next tanda after this delay. Default: 60 seconds.</p>
+        <div id="auto-advance-status" style="font-size:12px;color:var(--accent);min-height:16px;margin-top:4px"></div>
+      </div>
+
       <!-- Dance type override -->
       <div class="card">
         <div class="card-title">Dance Type <span id="dance-override-badge" class="dance-override-badge">Auto</span></div>

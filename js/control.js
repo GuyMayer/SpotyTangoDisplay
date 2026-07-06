@@ -9,6 +9,10 @@ const Control = (() => {
   let _currentDetectedType = ''; // auto-detected type for current track
   let _source = 'spotify';       // 'spotify' | 'live'
 
+  // Auto-advance state
+  let _autoAdvanceTimer = null;       // setTimeout handle
+  let _autoAdvanceCortinaId = null;   // track ID of the cortina that started the timer
+
   let _spotifyConnected = false;
   let _danceOverride = '';        // '' | 'Tango' | 'Milonga' | 'Vals' — DJ manual override
   let _orchestras = {};          // loaded from data/orchestras.json
@@ -93,6 +97,7 @@ const Control = (() => {
     _loadMode();
     _loadDanceOverride();
     _loadFormat();
+    _loadAutoAdvance();
     _renderProfileList();
     _renderRoomInfo();
     _renderStatusRow();
@@ -104,6 +109,7 @@ const Control = (() => {
     _bindStoryCard();
     _bindDanceOverride();
     _bindFormat();
+    _bindAutoAdvance();
     _bindTrackOverride();
     _loadSource();
     _bindSourceToggle();
@@ -224,6 +230,119 @@ const Control = (() => {
     else settingsEl.classList.remove('visible');
   }
 
+  // ── Auto-Advance ──────────────────────────────────────────────────────────
+  // When enabled, skip to next track after a cortina has played for N seconds.
+
+  const AUTO_ADVANCE_KEY = 'spotd_auto_advance';
+  const AUTO_ADVANCE_DEFAULT = { enabled: false, seconds: 60 };
+
+  function _getAutoAdvance() {
+    try {
+      const v = JSON.parse(localStorage.getItem(AUTO_ADVANCE_KEY) || 'null');
+      return Object.assign({}, AUTO_ADVANCE_DEFAULT, v || {});
+    } catch { return { ...AUTO_ADVANCE_DEFAULT }; }
+  }
+
+  function _saveAutoAdvance(cfg) {
+    localStorage.setItem(AUTO_ADVANCE_KEY, JSON.stringify(cfg));
+  }
+
+  function _loadAutoAdvance() {
+    const cfg = _getAutoAdvance();
+    const enabledEl = document.getElementById('auto-advance-enabled');
+    const secondsEl = document.getElementById('auto-advance-seconds');
+    const rowEl     = document.getElementById('auto-advance-seconds-row');
+    if (enabledEl) enabledEl.checked = cfg.enabled;
+    if (secondsEl) secondsEl.value = cfg.seconds;
+    if (rowEl) rowEl.style.display = cfg.enabled ? 'flex' : 'none';
+  }
+
+  function _bindAutoAdvance() {
+    const enabledEl = document.getElementById('auto-advance-enabled');
+    const secondsEl = document.getElementById('auto-advance-seconds');
+    const rowEl     = document.getElementById('auto-advance-seconds-row');
+
+    if (enabledEl) {
+      enabledEl.addEventListener('change', () => {
+        const cfg = _getAutoAdvance();
+        cfg.enabled = enabledEl.checked;
+        _saveAutoAdvance(cfg);
+        if (rowEl) rowEl.style.display = cfg.enabled ? 'flex' : 'none';
+        if (!cfg.enabled) _clearAutoAdvanceTimer();
+      });
+    }
+
+    if (secondsEl) {
+      secondsEl.addEventListener('change', () => {
+        const cfg = _getAutoAdvance();
+        let s = parseInt(secondsEl.value, 10);
+        if (isNaN(s)) s = 60;
+        s = Math.max(5, Math.min(600, s));   // clamp 5–600
+        cfg.seconds = s;
+        secondsEl.value = s;
+        _saveAutoAdvance(cfg);
+        // Restart timer if currently running so new delay applies
+        if (_autoAdvanceTimer && _lastTrack && _lastTrack.id) {
+          _maybeStartAutoAdvance(true, _lastTrack);
+        }
+      });
+    }
+  }
+
+  function _clearAutoAdvanceTimer() {
+    if (_autoAdvanceTimer) {
+      clearTimeout(_autoAdvanceTimer);
+      _autoAdvanceTimer = null;
+    }
+    _autoAdvanceCortinaId = null;
+  }
+
+  /**
+   * Start, restart, or clear the auto-advance timer based on cortina state.
+   * @param {boolean} isCortina - whether the current track is a cortina
+   * @param {object}  track     - current Spotify track object (with .id)
+   */
+  function _maybeStartAutoAdvance(isCortina, track) {
+    // Not a cortina → cancel any pending timer
+    if (!isCortina || !track || !track.id) {
+      _clearAutoAdvanceTimer();
+      return;
+    }
+
+    const cfg = _getAutoAdvance();
+    if (!cfg.enabled) {
+      _clearAutoAdvanceTimer();
+      return;
+    }
+
+    // Same cortina still playing → timer already running, leave it
+    if (_autoAdvanceCortinaId === track.id && _autoAdvanceTimer) return;
+
+    // Different cortina (DJ skipped mid-cortina) → restart
+    _clearAutoAdvanceTimer();
+    _autoAdvanceCortinaId = track.id;
+
+    const statusEl = document.getElementById('auto-advance-status');
+    if (statusEl) statusEl.textContent = '⏱ Cortina — auto-advance in ' + cfg.seconds + 's';
+
+    _autoAdvanceTimer = setTimeout(async () => {
+      _autoAdvanceTimer = null;
+      // Verify we're still on the same cortina (DJ may have skipped manually)
+      if (_autoAdvanceCortinaId !== track.id) return;
+
+      const ok = await Spotify.skipToNext();
+      if (ok) {
+        if (statusEl) statusEl.textContent = '✓ Skipped to next track';
+      } else {
+        // Likely 403 — scope not granted (existing user pre-feature)
+        if (statusEl) statusEl.textContent =
+          '✗ Skip failed — re-login to Spotify to grant playback permission';
+      }
+      _autoAdvanceCortinaId = null;
+      setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
+    }, cfg.seconds * 1000);
+  }
+
   // ── Spotify ───────────────────────────────────────────────────────────────
 
   function _startSpotify() {
@@ -281,6 +400,9 @@ const Control = (() => {
     // Tanda tracking
     if (track.id) Tanda.record(track.id, rawCortina.isCortina);
     const tandaPos = (rawCortina.isCortina || !showTanda) ? null : Tanda.getPosition(track.id);
+
+    // Auto-advance: start/stop timer based on cortina state
+    _maybeStartAutoAdvance(isCortina.isCortina, track);
 
     // DB lookup for dance type + recording year
     const artistName = track.artists && track.artists[0] && track.artists[0].name;
@@ -991,6 +1113,7 @@ const Control = (() => {
     'spotd_profiles', 'spotd_active_profile', 'spotd_story_overrides', 'spotd_track_types',
     'spotd_cortina_playlist', 'spotd_cortina_tracks', 'spotd_orchestra_cache',
     'spotd_relay_mode', 'spotd_local_host', 'spotd_local_tracks',
+    'spotd_auto_advance',
   ];
 
   // ── Track Database card (local additions + contribute) ────────────────────

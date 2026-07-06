@@ -237,6 +237,28 @@ const Spotify = (() => {
     _pollTimer = setTimeout(_poll, interval);
   }
 
+  // ── Playback control ──────────────────────────────────────────────────────
+
+  /**
+   * Skip to the next track in the user's queue.
+   * Requires `user-modify-playback-state` scope.
+   * @returns {Promise<boolean>} true if skip succeeded (HTTP 204)
+   */
+  async function skipToNext() {
+    const token = await _getAccessToken();
+    if (!token) return false;
+    try {
+      const res = await fetch(`${API_BASE}/me/player/next`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.status === 204;
+    } catch (err) {
+      console.error('[spotify] skipToNext error:', err);
+      return false;
+    }
+  }
+
   // ── Public API ────────────────────────────────────────────────────────────
 
   return {
@@ -249,5 +271,6 @@ const Spotify = (() => {
     getCurrentlyPlaying,
     getQueue,
     getArtistGenres,
+    skipToNext,
   };
 })();
