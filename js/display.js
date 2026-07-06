@@ -138,9 +138,8 @@ const Display = (() => {
     let _es = null;
 
     function connect() {
-      const protocol = host === 'localhost' || host.startsWith('127.') || host.startsWith('192.168.') || host.startsWith('10.') || host.startsWith('172.16.')
-        ? 'http' : 'https';
-      _es = new EventSource(protocol + '://' + host + '/events');
+      // The relay always serves HTTP (never HTTPS). No TLS on localhost:3456.
+      _es = new EventSource('http://' + host + '/events');
       _es.onopen    = () => _setConnectionBadge('connected', 'Live (local)');
       _es.onmessage = e => {
         try { _handleMessage(JSON.parse(e.data)); } catch (err) { /* ignore malformed */ }

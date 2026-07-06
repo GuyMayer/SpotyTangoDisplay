@@ -26,7 +26,8 @@ const PusherRelay = (() => {
   async function send(payload) {
     const host = getLocalHost();
     try {
-      const res = await fetch(window.location.protocol + '//' + host + '/push', {
+      // The relay always serves HTTP (never HTTPS on localhost:3456).
+      const res = await fetch('http://' + host + '/push', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
