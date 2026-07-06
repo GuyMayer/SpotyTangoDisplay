@@ -825,7 +825,7 @@ const Control = (() => {
         headers: {
           'Authorization': 'Bearer ' + apiKey,
           'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://guymayer.github.io/SpotyTangoDisplay/',
+          'HTTP-Referer': window.location.origin + '/',
         },
         body: JSON.stringify({
           models: ['openai/gpt-oss-20b:free', 'openai/gpt-oss-120b:free', 'meta-llama/llama-3.3-70b-instruct:free'],
@@ -870,7 +870,7 @@ const Control = (() => {
         headers: {
           'Authorization': 'Bearer ' + apiKey,
           'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://guymayer.github.io/SpotyTangoDisplay/',
+          'HTTP-Referer': window.location.origin + '/',
         },
         body: JSON.stringify({
           models: ['openai/gpt-oss-20b:free', 'openai/gpt-oss-120b:free', 'meta-llama/llama-3.3-70b-instruct:free'],
@@ -918,7 +918,7 @@ const Control = (() => {
         headers: {
           'Authorization': 'Bearer ' + apiKey,
           'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://guymayer.github.io/SpotyTangoDisplay/',
+          'HTTP-Referer': window.location.origin + '/',
         },
         body: JSON.stringify({
           models: [

@@ -549,7 +549,7 @@ const Wizard = (() => {
           headers: {
             'Authorization': 'Bearer ' + key,
             'Content-Type': 'application/json',
-            'HTTP-Referer': 'https://guymayer.github.io/SpotyTangoDisplay/',
+            'HTTP-Referer': window.location.origin + '/',
           },
           body: JSON.stringify({
             models: [

@@ -182,7 +182,7 @@ $updateTimer.Add_Tick({
             $tray.BalloonTipText    = "Version $newVer available - click to install"
             $tray.BalloonTipIcon    = [System.Windows.Forms.ToolTipIcon]::Info
             $tray.ShowBalloonTip(8000)
-            $tray.Add_BalloonTipClicked({ Start-Process "https://guymayer.github.io/SpotyTangoDisplay/download.html" })
+            $tray.Add_BalloonTipClicked({ Start-Process "https://display.tangopassion.co.uk/download.html" })
         }
     } elseif ($updateCheckCount -ge 6) {
         $updateTimer.Stop()
