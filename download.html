@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SpotyTangoDisplay — Windows Download</title>
+  <title>SpotyTangoDisplay — Download</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -20,40 +20,120 @@
       background: #1a1a1a;
       border: 1px solid #2a2a2a;
       border-radius: 12px;
-      padding: 40px 48px;
-      max-width: 520px;
+      padding: 48px 56px;
+      max-width: 640px;
       width: 100%;
-      text-align: center;
     }
-    .logo { font-size: 2.4rem; margin-bottom: 8px; }
-    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 6px; color: #fff; }
-    .subtitle { color: #888; font-size: 0.95rem; margin-bottom: 32px; }
+    .logo { font-size: 3rem; text-align: center; margin-bottom: 12px; }
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #fff;
+      text-align: center;
+      margin-bottom: 12px;
+      letter-spacing: 0.5px;
+    }
+    .intro {
+      color: #aaa;
+      font-size: 1rem;
+      line-height: 1.6;
+      text-align: center;
+      margin-bottom: 36px;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .intro strong { color: #c8a96e; }
+
+    /* ── Platform tabs ─────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid #2a2a2a;
+    }
+    .tab {
+      flex: 1;
+      background: none;
+      border: none;
+      color: #666;
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 12px 8px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+    .tab:hover { color: #aaa; }
+    .tab.active {
+      color: #c8a96e;
+      border-bottom-color: #c8a96e;
+    }
+
+    /* ── Panel ─────────────────────────────────────────────── */
+    .panel { display: none; text-align: center; }
+    .panel.active { display: block; }
+
     .btn-download {
       display: inline-block;
-      background: #e63946;
-      color: #fff;
+      background: #c8a96e;
+      color: #000;
       font-size: 1.1rem;
-      font-weight: 600;
-      padding: 16px 40px;
+      font-weight: 700;
+      padding: 16px 44px;
       border-radius: 8px;
       text-decoration: none;
       transition: background 0.15s;
+      margin-bottom: 24px;
     }
-    .btn-download:hover { background: #c1121f; }
+    .btn-download:hover { background: #d9bc84; }
     .btn-download span { margin-right: 10px; font-size: 1.3rem; }
+
+    .btn-disabled {
+      display: inline-block;
+      background: #2a2a2a;
+      color: #555;
+      font-size: 1.1rem;
+      font-weight: 600;
+      padding: 16px 44px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      cursor: not-allowed;
+    }
+    .btn-disabled span { margin-right: 10px; font-size: 1.3rem; }
+
     .steps {
-      margin-top: 32px;
       text-align: left;
       font-size: 0.9rem;
       color: #aaa;
       line-height: 1.8;
+      margin-top: 8px;
     }
     .steps ol { padding-left: 20px; }
     .steps li { margin-bottom: 4px; }
+    .steps code {
+      background: #222;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.85rem;
+      color: #c8a96e;
+    }
+
+    .coming-soon {
+      color: #555;
+      font-size: 0.95rem;
+      margin-top: 16px;
+      font-style: italic;
+    }
+
     .note {
-      margin-top: 24px;
+      margin-top: 32px;
+      padding-top: 20px;
+      border-top: 1px solid #2a2a2a;
       font-size: 0.8rem;
       color: #555;
+      text-align: center;
     }
     .note a { color: #777; }
   </style>
@@ -62,25 +142,84 @@
   <div class="card">
     <div class="logo">💃</div>
     <h1>SpotyTangoDisplay</h1>
-    <p class="subtitle">DJ control panel &amp; display for Tango milongas</p>
+    <p class="intro">
+      A web app for tango DJs and teachers. Display live track info on a
+      dancer screen — <strong>tandas, cortinas, orchestra bios, song
+      stories</strong> — with a separate fullscreen view for the venue TV.
+      Works with Spotify or live microphone recognition.
+    </p>
 
-    <a class="btn-download" href="https://github.com/GuyMayer/SpotyTangoDisplay/releases/latest/download/SpotyTangoDisplay-Setup.exe">
-      <span>⬇</span>Download for Windows (.exe)
-    </a>
+    <!-- Platform tabs -->
+    <div class="tabs">
+      <button class="tab active" data-platform="windows">Windows</button>
+      <button class="tab" data-platform="macos">macOS</button>
+      <button class="tab" data-platform="linux">Linux</button>
+    </div>
 
-    <div class="steps">
-      <ol>
-        <li>Click the button above — saves <strong>SpotyTangoDisplay-Setup.exe</strong></li>
-        <li>Double-click the EXE to install — Node.js installs automatically if needed</li>
-        <li>A desktop shortcut is created → double-click it any time to launch</li>
-        <li>Your browser opens the DJ control panel automatically</li>
-      </ol>
+    <!-- Windows panel -->
+    <div class="panel active" id="panel-windows">
+      <a class="btn-download" href="https://github.com/GuyMayer/SpotyTangoDisplay/releases/latest/download/SpotyTangoDisplay-Setup.exe">
+        <span>⬇</span>Download for Windows (.exe)
+      </a>
+      <div class="steps">
+        <ol>
+          <li>Click the button above — saves <strong>SpotyTangoDisplay-Setup.exe</strong></li>
+          <li>Double-click the EXE to install — Node.js installs automatically if needed</li>
+          <li>A desktop shortcut is created → double-click it any time to launch</li>
+          <li>Your browser opens the DJ control panel automatically</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- macOS panel -->
+    <div class="panel" id="panel-macos">
+      <div class="btn-disabled"><span>⏳</span>macOS app coming soon</div>
+      <p class="coming-soon">A native macOS app is in development.</p>
+      <div class="steps">
+        <p style="margin-bottom:8px">In the meantime, run from source:</p>
+        <ol>
+          <li>Install <a href="https://nodejs.org/en/download" style="color:#c8a96e">Node.js LTS</a></li>
+          <li>Open Terminal and run:<br>
+            <code>git clone https://github.com/GuyMayer/SpotyTangoDisplay.git</code><br>
+            <code>cd SpotyTangoDisplay && node relay.js</code></li>
+          <li>Browser opens at <code>http://localhost:3456</code></li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Linux panel -->
+    <div class="panel" id="panel-linux">
+      <div class="btn-disabled"><span>⏳</span>Linux app coming soon</div>
+      <p class="coming-soon">A packaged Linux build is in development.</p>
+      <div class="steps">
+        <p style="margin-bottom:8px">In the meantime, run from source:</p>
+        <ol>
+          <li>Install Node.js: <code>sudo apt install nodejs</code> (Debian/Ubuntu)</li>
+          <li>Clone and run:<br>
+            <code>git clone https://github.com/GuyMayer/SpotyTangoDisplay.git</code><br>
+            <code>cd SpotyTangoDisplay && node relay.js</code></li>
+          <li>Browser opens at <code>http://localhost:3456</code></li>
+        </ol>
+      </div>
     </div>
 
     <p class="note">
-      Windows 10 / 11 only &nbsp;·&nbsp;
+      Open source &nbsp;·&nbsp;
       <a href="https://github.com/GuyMayer/SpotyTangoDisplay" target="_blank">View on GitHub</a>
     </p>
   </div>
+
+  <script>
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const platform = tab.dataset.platform;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('panel-' + platform).classList.add('active');
+      });
+    });
+  </script>
 </body>
 </html>
