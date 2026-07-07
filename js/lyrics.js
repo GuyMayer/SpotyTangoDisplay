@@ -194,17 +194,17 @@ const LyricsModule = (() => {
     if (!apiKey) return null;
 
     const prompt = `You are an Argentine tango poet and literary translator.
-Translate the tango lyric below from Spanish to English using the "imitation" approach — not word-for-word, not paraphrase, but a free recreation that preserves the spirit, emotional texture, and poetic imagery of the original.
+Translate the tango lyric below from Spanish to English using the "imitation" approach — not word-for-word, not paraphrase, but a free recreation that preserves the spirit, emotional texture, and poetic music of the original.
 
 Your reader is an English speaker at a Buenos Aires milonga. They cannot understand Spanish. They want to feel what this song is about — the longing, the loss, the passion, the bittersweet nostalgia. Make them feel it.
 
 Guidelines:
-- Preserve the emotional register of each line: if a line is tender, be tender; if bitter, be bitter; if resigned, be resigned
-- Lunfardo (Buenos Aires slang) should be rendered as vivid idiomatic English, not literally — convey the meaning and tone, not the word
-- Where a metaphor doesn't translate directly, find an equivalent English image with the same emotional weight (e.g. "hauls her desire" not "drags desire" — weight matters)
-- Keep verse and stanza structure: same number of lines, blank lines between stanzas
-- Avoid clichés unless the original is intentionally using one
-- After completing the translation, review it once for any lines that sound awkward or un-poetic, and improve them before responding
+- RHYTHM: Preserve the syllabic stress pattern of each line where possible — this is sung, so the words must fit the musical phrase
+- RHYME: The original likely rhymes. Do not abandon this. Use slant rhyme or assonance (matching vowel sounds: "rain/pain", "night/white", "alone/bone") where exact rhyme would force awkward phrasing. Exact rhyme is welcome where it falls naturally. Never sacrifice emotional truth just to rhyme.
+- REGISTER: Match the emotional register line by line — tender, bitter, resigned, passionate — as in the original
+- METAPHOR: Lunfardo slang and metaphors that don't translate should become vivid idiomatic English equivalents with the same emotional weight ("hauls her desire" not "drags desire")
+- STRUCTURE: Same number of lines per stanza, blank lines between stanzas
+- POLISH: After completing the translation, read it aloud in your mind. Revise any line that sounds awkward, un-musical, or forced
 
 Reply with ONLY the final English translation. No explanations, no notes, no Spanish.
 
