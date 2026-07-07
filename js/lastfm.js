@@ -69,21 +69,42 @@ const LastFm = (() => {
     return text.replace(/\.\s*Read more on Last\.fm\.?$/i, '').trim();
   }
 
-  async function _tryWikipedia(title) {
-    // Single request only - most tango songs won't have a Wikipedia article.
-    try {
-      const r = await fetch(
-        'https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(title)
-      );
-      if (!r.ok) return null;
-      const d = await r.json();
-      if (d.type === 'disambiguation' || !d.extract) return null;
-      return {
-        story:  d.extract,
-        source: 'wikipedia',
-        url:    d.content_urls && d.content_urls.desktop && d.content_urls.desktop.page,
-      };
-    } catch (_) { return null; }
+  // Music-related terms that indicate a Wikipedia result is actually about a song/musician
+  const MUSIC_TERMS = /\b(song|tango|milonga|vals|waltz|music|album|single|track|band|orchestra|musician|composer|singer|vocalist|bandoneon|guitar|piano|soundtrack|recording)\b/i;
+
+  async function _tryWikipedia(title, artist) {
+    // Try title alone first, then "Title (song)" as fallback for common words
+    const variants = [title];
+    // If the title is a common word likely to match a non-music article, try _(song) first
+    if (title.split(' ').length <= 2) variants.push(title + ' (song)');
+
+    for (const variant of variants) {
+      try {
+        const r = await fetch(
+          'https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(variant)
+        );
+        if (!r.ok) continue;
+        const d = await r.json();
+        if (d.type === 'disambiguation' || !d.extract) continue;
+
+        // Validate: description or first sentence must be music-related
+        // Otherwise we'd show "Carousel = amusement ride" instead of the song
+        const descCheck = (d.description || '') + ' ' + d.extract.slice(0, 200);
+        // Accept if: description says "song by", "album by", "tango", "musician" etc.
+        // OR artist name appears in the extract (good sign it's the right page)
+        const artistMatch = artist && d.extract.toLowerCase().includes(
+          artist.toLowerCase().replace(/\s+(y su|and his|orquesta|orchestra|sexteto|quartet|quintet).*/i, '').split(' ')[0]
+        );
+        if (!MUSIC_TERMS.test(descCheck) && !artistMatch) continue;
+
+        return {
+          story:  d.extract,
+          source: 'wikipedia',
+          url:    d.content_urls && d.content_urls.desktop && d.content_urls.desktop.page,
+        };
+      } catch (_) { continue; }
+    }
+    return null;
   }
 
   /**
@@ -138,7 +159,7 @@ const LastFm = (() => {
     }
 
     // ── 4. Wikipedia fallback ────────────────────────────────────────────────
-    if (!result) result = await _tryWikipedia(title);
+    if (!result) result = await _tryWikipedia(title, artist);
 
     _cache[cacheKey] = result;
     return result;
