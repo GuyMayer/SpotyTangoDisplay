@@ -59,6 +59,8 @@ const Display = (() => {
   let _profile = null;
   let _currentState = null; // 'idle' | 'track' | 'cortina'
   let _currentMode = 'milonga'; // tracks last received mode for background selection
+  let _currentTrackKey = '';    // "title|artist" of the currently displayed track
+  let _currentOrchBio  = null;  // orchestraBio of current track (null = not yet loaded)
   let _lessonMode = false;
   let _transitionActive = false;
   let _localVideoActive = false;
@@ -219,7 +221,18 @@ const Display = (() => {
     if (data.isCortina && format === 'tandas-cortinas') {
       _transitionTo('cortina', () => _renderCortina(data, mode));
     } else {
-      _transitionTo('track', () => _renderTrack(data, mode, format));
+      // If same track is already showing and only orchestraBio changed,
+      // update left panel in-place without a full re-render/transition
+      const incomingKey = (data.title || '') + '|' + (data.artist || '');
+      if (_currentState === 'track' && incomingKey === _currentTrackKey &&
+          data.orchestraBio && !_currentOrchBio) {
+        _currentOrchBio = data.orchestraBio;
+        _populateLessonPanels(data);
+      } else {
+        _currentTrackKey = incomingKey;
+        _currentOrchBio  = data.orchestraBio || null;
+        _transitionTo('track', () => _renderTrack(data, mode, format));
+      }
     }
   }
 
@@ -636,7 +649,13 @@ const Display = (() => {
     const chars = orch.characteristics || [];
     const isWikiBio = chars.length === 1 && chars[0].length > 80;
 
-    if (isWikiBio) {
+    if (!data.orchestraBio) {
+      // Bio not yet loaded — show subtle placeholder
+      els.lessonOrchEra.textContent   = '';
+      els.lessonOrchStyle.textContent = 'Looking up…';
+      els.lessonOrchChars.innerHTML   = '';
+      els.lessonOrchSingers.textContent = '';
+    } else if (isWikiBio) {
       // Show Wikipedia extract as a paragraph; suppress era/style/singers (may be empty)
       els.lessonOrchEra.textContent   = '';
       els.lessonOrchStyle.textContent = '';
