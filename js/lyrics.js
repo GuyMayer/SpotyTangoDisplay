@@ -105,21 +105,23 @@ const LyricsModule = (() => {
       console.warn('[Lyrics] LRCLIB error:', err);
     }
 
-    // 2. Fallback: try plain LRCLIB search endpoint (broader match)
+    // 2. Fallback: LRCLIB search (broader fuzzy match, also CORS-safe)
     try {
-      const url = `https://lrclib.net/api/search?artist_name=${encodeURIComponent(artist)}&track_name=${encodeURIComponent(title)}`;
-      const res = await fetch(url);
-      if (res.ok) {
-        const results = await res.json();
-        const hit = results && results[0];
+      // Use the search endpoint which accepts partial title/artist matches
+      const searchUrl = `https://lrclib.net/api/search?q=${encodeURIComponent(title + ' ' + artist)}`;
+      const res2 = await fetch(searchUrl);
+      if (res2.ok) {
+        const hits = await res2.json();
+        const hit = Array.isArray(hits) && hits[0];
         if (hit && (hit.syncedLyrics || hit.plainLyrics)) {
+          console.log('[Lyrics] Found on LRCLIB (search)');
           const result = { text: hit.plainLyrics || hit.syncedLyrics, source: 'LRCLIB' };
           if (hit.syncedLyrics) result.synced = _parseLRC(hit.syncedLyrics);
           return result;
         }
       }
     } catch (err) {
-      console.warn('[Lyrics] LRCLIB search error:', err);
+      // LRCLIB search may not allow CORS from all origins — silently skip
     }
 
     return null;

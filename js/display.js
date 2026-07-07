@@ -222,12 +222,12 @@ const Display = (() => {
       _transitionTo('cortina', () => _renderCortina(data, mode));
     } else {
       // If same track is already showing and only orchestraBio changed,
-      // update left panel in-place without a full re-render/transition
+      // update LEFT panel only — do NOT re-run the story/lyrics chain
       const incomingKey = (data.title || '') + '|' + (data.artist || '');
       if (_currentState === 'track' && incomingKey === _currentTrackKey &&
           data.orchestraBio && !_currentOrchBio) {
         _currentOrchBio = data.orchestraBio;
-        _populateLessonPanels(data);
+        _updateOrchBioOnly(data.orchestraBio, data.artist);
       } else {
         _currentTrackKey = incomingKey;
         _currentOrchBio  = data.orchestraBio || null;
@@ -634,6 +634,38 @@ const Display = (() => {
     }
   }
 
+  // Update only the orchestra bio (left panel) without disturbing the right panel.
+  // Called when the async bio fetch completes after the track is already displayed.
+  function _updateOrchBioOnly(orchBio, fallbackArtist) {
+    if (!orchBio) return;
+    const orch  = orchBio;
+    const chars = orch.characteristics || [];
+    const isWikiBio = chars.length === 1 && chars[0].length > 80;
+
+    els.lessonOrchName.textContent = orch.name || fallbackArtist || '';
+    els.lessonOrchNick.textContent = orch.nickname || '';
+
+    if (isWikiBio) {
+      els.lessonOrchEra.textContent   = '';
+      els.lessonOrchStyle.textContent = '';
+      els.lessonOrchChars.innerHTML   = '<p style="font-size:12px;color:#999;line-height:1.6;margin:6px 0 0">' +
+        chars[0].replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p>';
+      els.lessonOrchSingers.textContent = '';
+    } else {
+      els.lessonOrchEra.textContent   = orch.era   || '';
+      els.lessonOrchStyle.textContent = orch.style || '';
+      els.lessonOrchChars.innerHTML   = '';
+      chars.forEach(c => {
+        const li = document.createElement('li');
+        li.textContent = c;
+        els.lessonOrchChars.appendChild(li);
+      });
+      const singers = orch.notable_singers;
+      els.lessonOrchSingers.textContent = singers && singers.length
+        ? 'Singers: ' + singers.join(', ') : '';
+    }
+  }
+
   function _populateLessonPanels(data) {
     // Panel visibility from profile
     const lp = _profile.lessonPanels || {};
@@ -849,13 +881,18 @@ const Display = (() => {
     const year   = data.year || '';
     const genre  = data.genre || '';
     const singer = data.singer || '';
+    const album  = data.album || '';
+    const mins   = data.durationMs ? Math.floor(data.durationMs / 60000) : 0;
+    const secs   = data.durationMs ? String(Math.floor((data.durationMs % 60000) / 1000)).padStart(2, '0') : '';
     const parts  = [];
     if (year)   parts.push('📅 ' + year);
     if (genre)  parts.push('🎵 ' + genre);
     if (singer) parts.push('🎤 ' + singer);
+    if (album)  parts.push('💿 ' + album);
+    if (mins)   parts.push('⏱ ' + mins + ':' + secs);
 
     if (parts.length > 0) {
-      els.lessonStory.textContent = parts.join('  ·  ');
+      els.lessonStory.innerHTML = parts.map(p => `<div style="margin:3px 0">${p}</div>`).join('');
       els.lessonThemes.textContent = '';
     } else {
       els.lessonStory.textContent = '';
