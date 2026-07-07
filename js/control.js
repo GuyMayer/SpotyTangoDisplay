@@ -367,6 +367,8 @@ const Control = (() => {
     document.querySelectorAll('.mode-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.mode === _mode);
     });
+    const toggleGroup = document.getElementById('lang-toggle-group');
+    if (toggleGroup) toggleGroup.style.display = (_mode === 'lesson') ? 'flex' : 'none';
   }
 
   function _bindLyricsLangToggle() {
