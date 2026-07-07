@@ -713,44 +713,6 @@ const Display = (() => {
 
     const rightPanel = document.getElementById('lesson-right');
 
-    function _applyStory(text) {
-      els.lessonStory.textContent = text || '';
-      if (rightPanel && text) requestAnimationFrame(() => _fitTextToPanel(els.lessonStory, rightPanel, 16, 9));
-    }
-
-    function _applyLyrics(lyrics) {
-      if (!lyrics) {
-        els.lessonStory.innerHTML = '';
-        els.lessonThemes.textContent = '';
-        _currentLyrics = null;
-        return;
-      }
-
-      _currentLyrics = lyrics;
-      
-      // If synced lyrics available, show karaoke style
-      if (lyrics.synced && lyrics.synced.length > 0) {
-        els.lessonStory.innerHTML = lyrics.synced.map((line, idx) => 
-          `<div class="lyric-line" data-time="${line.time}" data-idx="${idx}">${line.text || '&nbsp;'}</div>`
-        ).join('');
-        els.lessonThemes.textContent = 'Source: ' + lyrics.source;
-        _startKaraokeSync(data.position || 0);
-      } 
-      // Tango lyrics with translations
-      else if (lyrics.es || lyrics.en) {
-        const text = lyrics.en || lyrics.es || '';
-        els.lessonStory.textContent = text;
-        els.lessonThemes.textContent = 'Lyrics' + (lyrics.en && lyrics.es ? ' (Translated)' : '');
-        if (rightPanel && text) requestAnimationFrame(() => _fitTextToPanel(els.lessonStory, rightPanel, 14, 9));
-      }
-      // Plain text lyrics
-      else if (lyrics.text) {
-        els.lessonStory.textContent = lyrics.text;
-        els.lessonThemes.textContent = 'Lyrics: ' + lyrics.source;
-        if (rightPanel && lyrics.text) requestAnimationFrame(() => _fitTextToPanel(els.lessonStory, rightPanel, 14, 9));
-      }
-    }
-
     // Song story / lyrics (right panel)
     // Priority depends on song type:
     // - Tango songs: story first (Wikipedia/Last.fm) → lyrics fallback
@@ -823,6 +785,40 @@ const Display = (() => {
     }
   }
 
+  function _applyStory(text) {
+    const rightPanel = document.getElementById('lesson-right');
+    els.lessonStory.textContent = text || '';
+    if (rightPanel && text) requestAnimationFrame(() => _fitTextToPanel(els.lessonStory, rightPanel, 16, 9));
+  }
+
+  function _applyLyrics(lyrics, position) {
+    if (!lyrics) {
+      els.lessonStory.innerHTML = '';
+      els.lessonThemes.textContent = '';
+      _currentLyrics = null;
+      return;
+    }
+    const rightPanel = document.getElementById('lesson-right');
+    _currentLyrics = lyrics;
+
+    if (lyrics.synced && lyrics.synced.length > 0) {
+      els.lessonStory.innerHTML = lyrics.synced.map((line, idx) =>
+        `<div class="lyric-line" data-time="${line.time}" data-idx="${idx}">${line.text || '&nbsp;'}</div>`
+      ).join('');
+      els.lessonThemes.textContent = 'Source: ' + lyrics.source;
+      _startKaraokeSync(position || 0);
+    } else if (lyrics.es || lyrics.en) {
+      const text = lyrics.en || lyrics.es || '';
+      els.lessonStory.textContent = text;
+      els.lessonThemes.textContent = 'Lyrics' + (lyrics.en && lyrics.es ? ' (Translated)' : '');
+      if (rightPanel && text) requestAnimationFrame(() => _fitTextToPanel(els.lessonStory, rightPanel, 14, 9));
+    } else if (lyrics.text) {
+      els.lessonStory.textContent = lyrics.text;
+      els.lessonThemes.textContent = 'Lyrics: ' + lyrics.source;
+      if (rightPanel && lyrics.text) requestAnimationFrame(() => _fitTextToPanel(els.lessonStory, rightPanel, 14, 9));
+    }
+  }
+
   function _tryFetchLyrics(title, artist, trackKey, data, onNotFound) {
     if (typeof LyricsModule === 'undefined') {
       if (onNotFound) onNotFound();
@@ -833,7 +829,7 @@ const Display = (() => {
     LyricsModule.getLyrics(title, artist).then(lyrics => {
       if (_lessonTrackKey !== trackKey) return; // stale
       if (lyrics) {
-        _applyLyrics(lyrics);
+        _applyLyrics(lyrics, data.progressMs || 0);
       } else {
         if (onNotFound) onNotFound();
         else _showFallbackContent(data, trackKey);

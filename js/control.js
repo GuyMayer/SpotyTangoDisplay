@@ -694,6 +694,7 @@ const Control = (() => {
       year,
       singer:    dbResult.singer || '',
       durationMs: track.duration_ms || 0,
+      progressMs: data.raw && data.raw.progress_ms || 0,
       spotifyUrl: track.external_urls && track.external_urls.spotify || '',
       albumArt:  track.album && track.album.images && track.album.images[0] && track.album.images[0].url,
       tandaPosition: tandaPos && tandaPos.position,
