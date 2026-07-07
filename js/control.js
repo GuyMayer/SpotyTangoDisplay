@@ -16,6 +16,8 @@ const Control = (() => {
   let _spotifyConnected = false;
   let _danceOverride = '';        // '' | 'Tango' | 'Milonga' | 'Vals' — DJ manual override
   let _orchestras = {};          // loaded from data/orchestras.json
+  let _orchestrasReady = false;   // true once JSON has loaded
+  let _orchestrasLoad = null;     // Promise that resolves when load completes
   const ORCHESTRA_CACHE_KEY = 'spotd_orchestra_cache';
   let _orchestraBioCache = (() => {
     try { return JSON.parse(localStorage.getItem(ORCHESTRA_CACHE_KEY) || '{}'); } catch { return {}; }
@@ -24,10 +26,11 @@ const Control = (() => {
   // ── Orchestra lookup ──────────────────────────────────────────────────────
 
   function _loadOrchestras() {
-    fetch('data/orchestras.json')
+    _orchestrasLoad = fetch('data/orchestras.json')
       .then(r => r.json())
-      .then(d => { _orchestras = d; })
-      .catch(() => {});
+      .then(d => { _orchestras = d; _orchestrasReady = true; })
+      .catch(() => { _orchestrasReady = true; });
+    return _orchestrasLoad;
   }
 
   function _getOrchestraBio(artistName) {
@@ -1147,6 +1150,14 @@ const Control = (() => {
   async function _maybeFetchOrchestraBio(artistName, basePayload) {
     if (!artistName) return;
     const key = artistName.toLowerCase().trim();
+
+    // Wait for orchestras.json to finish loading, then re-check local DB
+    if (!_orchestrasReady && _orchestrasLoad) await _orchestrasLoad;
+    const localBio = _getOrchestraBio(artistName);
+    if (localBio) {
+      _pushState(Object.assign({}, basePayload, { orchestraBio: localBio }));
+      return;
+    }
 
     if (key in _orchestraBioCache) {
       if (_orchestraBioCache[key]) _pushState(Object.assign({}, basePayload, { orchestraBio: _orchestraBioCache[key] }));
