@@ -232,10 +232,21 @@ const Spotify = (() => {
       }
     } catch (err) {
       console.error('Spotify poll error:', err);
+      // If we have no token at all (e.g. refresh failed), stop polling and
+      // fire onAuthLost so the UI can prompt re-auth
+      const token = localStorage.getItem(STORAGE.accessToken);
+      if (!token && _onAuthLost) {
+        _onAuthLost();
+        return; // stop poll loop
+      }
     }
 
     _pollTimer = setTimeout(_poll, interval);
   }
+
+  let _onAuthLost = null;
+
+  function setOnAuthLost(fn) { _onAuthLost = fn; }
 
   // ── Playback control ──────────────────────────────────────────────────────
 
@@ -298,5 +309,6 @@ const Spotify = (() => {
     getArtistGenres,
     getPlaylistTracks,
     skipToNext,
+    setOnAuthLost,
   };
 })();

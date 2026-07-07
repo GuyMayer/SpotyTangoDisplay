@@ -514,11 +514,37 @@ const Control = (() => {
     }
 
     if (!Spotify.isLoggedIn()) {
-      _setSpotifyStatus('error', 'Not connected');
+      _setSpotifyStatus('error', 'Not connected — click to authorise');
+      // Make the pill clickable to trigger auth without opening Settings
+      const pill = document.getElementById('status-spotify');
+      if (pill && !pill._authClickBound) {
+        pill._authClickBound = true;
+        pill.style.cursor = 'pointer';
+        pill.title = 'Click to authorise Spotify';
+        pill.addEventListener('click', () => {
+          const clientId = localStorage.getItem('spotd_spotify_client_id');
+          if (!clientId || clientId === 'YOUR_SPOTIFY_CLIENT_ID') {
+            alert('Enter your Spotify Client ID in Settings first (⚙ Settings → Spotify).');
+            return;
+          }
+          Spotify.login();
+        });
+      }
       return;
     }
 
     _setSpotifyStatus('ok', 'Spotify connected');
+    Spotify.setOnAuthLost(() => {
+      Spotify.stopPolling();
+      _setSpotifyStatus('error', 'Session expired — click to reconnect');
+      const pill = document.getElementById('status-spotify');
+      if (pill) {
+        pill.style.cursor = 'pointer';
+        pill.title = 'Click to reconnect Spotify';
+        pill._authClickBound = false; // reset so handler re-binds
+      }
+      _startSpotify(); // re-run — will re-bind click handler on the pill
+    });
     Spotify.startPolling(_onTrackChange);
   }
 
