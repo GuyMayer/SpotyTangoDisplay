@@ -2,9 +2,25 @@
 // No build step; browser globals only.
 
 const LastFm = (() => {
-  const STORAGE_KEY    = 'spotd_lastfm_key';
-  const API_URL        = 'https://ws.audioscrobbler.com/2.0/';
-  const _cache         = {};   // keyed by "title|artist" lowercase, runtime session
+  const STORAGE_KEY       = 'spotd_lastfm_key';
+  const API_URL          = 'https://ws.audioscrobbler.com/2.0/';
+  const STORIES_CACHE_KEY = 'spotd_song_stories';
+  const _cache           = {};
+  let   _cacheLoaded     = false;
+
+  function _loadStoriesCache() {
+    if (_cacheLoaded) return;
+    try {
+      const stored = localStorage.getItem(STORIES_CACHE_KEY);
+      if (stored) Object.assign(_cache, JSON.parse(stored));
+    } catch {}
+    _cacheLoaded = true;
+  }
+
+  function _saveStoriesCache() {
+    try { localStorage.setItem(STORIES_CACHE_KEY, JSON.stringify(_cache)); } catch {}
+  }
+
   let   _localStories  = null; // loaded once from data/tango-stories.json
 
   function getKey() { return localStorage.getItem(STORAGE_KEY) || ''; }
@@ -115,6 +131,7 @@ const LastFm = (() => {
    */
   async function fetchTrackInfo(title, artist) {
     if (!title) return null;
+    _loadStoriesCache();
     const cacheKey = (title + '|' + (artist || '')).toLowerCase();
     if (_cache[cacheKey] !== undefined) return _cache[cacheKey];
 
@@ -123,6 +140,7 @@ const LastFm = (() => {
     if (override) {
       const result = { story: override, source: 'custom' };
       _cache[cacheKey] = result;
+      _saveStoriesCache();
       return result;
     }
 
@@ -131,6 +149,7 @@ const LastFm = (() => {
     const local = _lookupLocal(db, title);
     if (local) {
       _cache[cacheKey] = local;
+      _saveStoriesCache();
       return local;
     }
 
@@ -162,6 +181,7 @@ const LastFm = (() => {
     if (!result) result = await _tryWikipedia(title, artist);
 
     _cache[cacheKey] = result;
+    _saveStoriesCache();
     return result;
   }
 

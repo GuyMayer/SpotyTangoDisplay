@@ -4,6 +4,7 @@ const Control = (() => {
 
   let _mode = 'milonga';         // 'milonga' | 'lesson'
   let _format = 'tandas-cortinas'; // 'tandas-cortinas' | 'tandas-nocortinas' | 'single'
+  let _lyricsLang = 'es';         // 'es' | 'en' — DJ controls lyrics language on display
   let _lastTrack = null;
   let _currentTrackId = null;    // track ID for per-track DB overrides
   let _currentDetectedType = ''; // auto-detected type for current track
@@ -136,6 +137,7 @@ const Control = (() => {
     _renderRoomInfo();
     _renderStatusRow();
 
+    _loadTranslationCache();
     _bindModeToggle();
     _bindProfileActions();
     _bindSettingsBtn();
@@ -149,6 +151,7 @@ const Control = (() => {
     _bindSourceToggle();
     _bindSettingsBackup();
     _bindLocalTrackDB();
+    _bindLyricsLangToggle();
 
     _startSpotify();
     _startPusher();
@@ -363,6 +366,19 @@ const Control = (() => {
   function _updateModeUI() {
     document.querySelectorAll('.mode-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.mode === _mode);
+    });
+  }
+
+  function _bindLyricsLangToggle() {
+    _lyricsLang = localStorage.getItem('spotd_lyrics_lang') || 'es';
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.lang === _lyricsLang);
+      btn.addEventListener('click', () => {
+        _lyricsLang = btn.dataset.lang;
+        localStorage.setItem('spotd_lyrics_lang', _lyricsLang);
+        document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === _lyricsLang));
+        _pushCurrentState(); // re-send with new lang
+      });
     });
   }
 
@@ -716,6 +732,7 @@ const Control = (() => {
       nextLabel,
       orchestraBio: _getOrchestraBio(artistName),
       songStory: _storyCurrentText || undefined,
+      lang: _lyricsLang,
       appearance: {
         lessonPanels: (Profiles.getActive().lessonPanels) || { showOrchestra: true, showStory: true },
       },
@@ -726,7 +743,11 @@ const Control = (() => {
     _maybeTranslateTitle(track.name, payload);
 
     // Async: fetch AI orchestra bio if not in local DB
-    if (!payload.orchestraBio) _maybeFetchOrchestraBio(artistName, payload);
+    if (!payload.orchestraBio) {
+      _maybeFetchOrchestraBio(artistName, payload);
+      // Show composer/original orchestra for modern cover versions
+      _maybeLookupComposer(track.name, artistName, payload);
+    }
   }
 
   async function _pushCurrentState() {
@@ -1289,6 +1310,30 @@ const Control = (() => {
     return null;
   }
 
+  // Cache for composer/original-orchestra lookups
+  const COMPOSER_CACHE_KEY = 'spotd_composer_cache';
+  let _composerCache = {};
+  try { _composerCache = JSON.parse(localStorage.getItem(COMPOSER_CACHE_KEY) || '{}'); } catch {}
+
+  async function _maybeLookupComposer(title, artistName, basePayload) {
+    if (!title || !artistName) return;
+    const key = (title + '|' + artistName).toLowerCase();
+    if (key in _composerCache) {
+      if (_composerCache[key]) _pushState(Object.assign({}, basePayload, { composerInfo: _composerCache[key] }));
+      return;
+    }
+    // Check TangoDB: find earliest recording of this song
+    if (typeof TangoDB === 'undefined') return;
+    const recordings = TangoDB.searchByTitle(title);
+    if (recordings.length === 0) { _composerCache[key] = null; return; }
+    const earliest = recordings[0];
+    const info = 'Originally: ' + earliest.artist.replace(/\b\w/g, c => c.toUpperCase()) +
+      (earliest.year ? ' (' + earliest.year + ')' : '');
+    _composerCache[key] = info;
+    try { localStorage.setItem(COMPOSER_CACHE_KEY, JSON.stringify(_composerCache)); } catch {}
+    _pushState(Object.assign({}, basePayload, { composerInfo: info }));
+  }
+
   async function _maybeTranslateTitle(title, basePayload) {
     if (!title || !_looksSpanish(title)) return;
 
@@ -1324,6 +1369,7 @@ const Control = (() => {
       const t = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
       const translation = t && t.trim();
       _translationCache[title] = translation || null;
+      try { localStorage.setItem(TITLE_TRANSLATION_KEY, JSON.stringify(_translationCache)); } catch {}
       if (translation) _pushState(Object.assign({}, basePayload, { titleTranslation: translation }));
     } catch (e) {
       _translationCache[title] = null;

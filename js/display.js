@@ -205,6 +205,7 @@ const Display = (() => {
 
     // Track mode early so _applyBackground can choose the right background
     _currentMode = data.mode || 'milonga';
+    _displayLang = data.lang || 'es';
 
     // Apply profile from payload if provided (live profile switch)
     if (data.appearance) {
@@ -382,6 +383,10 @@ const Display = (() => {
     _setTextField(els.trackTitle,  fields, 'title',  data.title);
     if (els.trackTranslation) {
       els.trackTranslation.textContent = data.titleTranslation ? '(' + data.titleTranslation + ')' : '';
+    }
+    // Composer / original orchestra — shown when the playing band is not in local DB
+    if (els.trackComposer) {
+      els.trackComposer.textContent = data.composerInfo || '';
     }
     const genreLabel = (data.genre && format !== 'single' && data.tandaPosition)
       ? data.genre + ' #' + data.tandaPosition
@@ -797,23 +802,8 @@ const Display = (() => {
 
   function _applyStory(text) {
     const rightPanel = document.getElementById('lesson-right');
-    _showLangToggle(false);
     els.lessonStory.textContent = text || '';
     if (rightPanel && text) requestAnimationFrame(() => _fitTextToPanel(els.lessonStory, rightPanel, 16, 9));
-  }
-
-  // Show ES / EN language toggle; hidden by default, revealed when EN is available
-  function _showLangToggle(show) {
-    const toggle = document.getElementById('lyrics-lang-toggle');
-    if (!toggle) return;
-    if (show) toggle.classList.remove('hidden');
-    else       toggle.classList.add('hidden');
-  }
-
-  function _setActiveLang(lang) {
-    document.querySelectorAll('.lang-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.lang === lang);
-    });
   }
 
   function _renderLyricsEs(lyrics, position, rightPanel) {
@@ -845,47 +835,27 @@ const Display = (() => {
     if (rightPanel && lyrics.en) requestAnimationFrame(() => _fitTextToPanel(els.lessonStory, rightPanel, 14, 9));
   }
 
-  function _bindLangToggle(lyrics, position) {
-    const toggle = document.getElementById('lyrics-lang-toggle');
-    if (!toggle) return;
-    const fresh = toggle.cloneNode(true);
-    toggle.parentNode.replaceChild(fresh, toggle);
-    fresh.querySelectorAll('.lang-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        _setActiveLang(btn.dataset.lang);
-        if (btn.dataset.lang === 'en') {
-          _renderLyricsEn(lyrics);
-        } else {
-          _renderLyricsEs(lyrics, position);
-        }
-      });
-    });
-  }
+  // Display language (controlled by DJ panel, syncs via payload.lang)
+  let _displayLang = 'es'; 
 
   function _applyLyrics(lyrics, position, title, artist, cacheKey) {
     if (!lyrics) {
       els.lessonStory.innerHTML = '';
       els.lessonThemes.textContent = '';
-      _showLangToggle(false);
       _currentLyrics = null;
       return;
     }
     const rightPanel = document.getElementById('lesson-right');
     _currentLyrics = lyrics;
 
-    // Show toggle immediately if EN already cached
-    if (lyrics.en) {
-      _showLangToggle(true);
-      _setActiveLang('es');
-      _bindLangToggle(lyrics, position);
+    // Show EN if DJ switched language and translation is available
+    if (_displayLang === 'en' && lyrics.en) {
+      _renderLyricsEn(lyrics);
     } else {
-      _showLangToggle(false);
+      _renderLyricsEs(lyrics, position, rightPanel);
     }
 
-    // Render Spanish / karaoke
-    _renderLyricsEs(lyrics, position, rightPanel);
-
-    // Background translation: detect Spanish, fire-and-forget
+    // Background translation: detect non-English, fire-and-forget
     if (!lyrics.en && typeof LyricsModule !== 'undefined' && cacheKey) {
       const textToTranslate = lyrics.text ||
         (lyrics.synced ? lyrics.synced.map(l => l.text).filter(Boolean).join('\n') : '') ||
@@ -896,9 +866,8 @@ const Display = (() => {
           .then(en => {
             if (!en || _lessonTrackKey !== snapshot) return;
             lyrics.en = en;
-            _showLangToggle(true);
-            _setActiveLang('es');
-            _bindLangToggle(lyrics, position);
+            // If DJ already switched to EN, re-render with new translation
+            if (_displayLang === 'en') _renderLyricsEn(lyrics);
           });
       }
     }
