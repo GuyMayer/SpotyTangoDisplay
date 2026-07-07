@@ -24,6 +24,13 @@ const Control = (() => {
     try { return JSON.parse(localStorage.getItem(ORCHESTRA_CACHE_KEY) || '{}'); } catch { return {}; }
   })();  // AI-generated bios, persisted to localStorage
 
+  let _translationCache = {};
+  const TITLE_TRANSLATION_KEY = 'spotd_title_translations';
+
+  function _loadTranslationCache() {
+    try { _translationCache = JSON.parse(localStorage.getItem(TITLE_TRANSLATION_KEY) || '{}'); } catch {}
+  }
+
   // ── Orchestra lookup ──────────────────────────────────────────────────────
 
   function _loadOrchestras() {
@@ -1170,8 +1177,6 @@ const Control = (() => {
   }
 
   // ── Title translation ─────────────────────────────────────────────────────
-
-  const _translationCache = {};  // title → translated string or null
 
   function _looksSpanish(title) {
     if (/[áéíóúüñ¿¡]/i.test(title)) return true;
