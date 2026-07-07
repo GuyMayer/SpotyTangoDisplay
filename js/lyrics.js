@@ -58,21 +58,20 @@ const LyricsModule = (() => {
   function _parseLRC(lrc) {
     if (!lrc) return null;
     
-    const lines = lrc.split('\n');
+    // Normalise CRLF → LF and trim
+    const lines = lrc.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
     const parsed = [];
     
     for (const line of lines) {
-      // Match [mm:ss.xx] timestamp
       const match = line.match(/\[(\d{2}):(\d{2})\.(\d{2})\](.*)/);
-      if (match) {
-        const minutes = parseInt(match[1]);
-        const seconds = parseInt(match[2]);
-        const centiseconds = parseInt(match[3]);
-        const text = match[4].trim();
-        
-        const timeMs = (minutes * 60 + seconds) * 1000 + centiseconds * 10;
-        parsed.push({ time: timeMs, text });
-      }
+      if (!match) continue;
+      const text = match[4].trim();
+      if (!text) continue; // skip empty lyric lines (beat markers, blank lines)
+      const minutes = parseInt(match[1]);
+      const seconds = parseInt(match[2]);
+      const centiseconds = parseInt(match[3]);
+      const timeMs = (minutes * 60 + seconds) * 1000 + centiseconds * 10;
+      parsed.push({ time: timeMs, text });
     }
     
     return parsed.length > 0 ? parsed : null;
@@ -88,8 +87,10 @@ const LyricsModule = (() => {
         const data = await res.json();
         if (data.syncedLyrics || data.plainLyrics) {
           console.log('[Lyrics] Found on LRCLIB:', data.syncedLyrics ? 'synced' : 'plain');
+          // Normalise line endings and trim surrounding whitespace
+          const plainText = (data.plainLyrics || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
           const result = {
-            text: data.plainLyrics || data.syncedLyrics,
+            text: plainText,
             source: 'LRCLIB'
           };
           
@@ -115,7 +116,8 @@ const LyricsModule = (() => {
         const hit = Array.isArray(hits) && hits[0];
         if (hit && (hit.syncedLyrics || hit.plainLyrics)) {
           console.log('[Lyrics] Found on LRCLIB (search)');
-          const result = { text: hit.plainLyrics || hit.syncedLyrics, source: 'LRCLIB' };
+          const plainText = (hit.plainLyrics || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+          const result = { text: plainText, source: 'LRCLIB' };
           if (hit.syncedLyrics) result.synced = _parseLRC(hit.syncedLyrics);
           return result;
         }
