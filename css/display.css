@@ -329,6 +329,44 @@ html, body {
 #lesson-story  { font-size: 16px; color: #aaa; line-height: 1.7; white-space: pre-wrap; }
 #lesson-themes { font-size: 12px; color: #666; margin-top: 6px; font-style: italic; }
 
+/* Karaoke lyrics */
+.lyric-line {
+  font-size: 16px;
+  color: #666;
+  line-height: 1.8;
+  padding: 4px 0;
+  transition: color 0.2s ease;
+}
+
+.lyric-line.current {
+  color: #4ade80; /* green-400 */
+  font-weight: 500;
+  font-size: 18px;
+}
+
+#lesson-right {
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  max-height: 90vh;
+}
+
+#lesson-right::-webkit-scrollbar {
+  width: 4px;
+}
+
+#lesson-right::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.03);
+}
+
+#lesson-right::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+}
+
+#lesson-right::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.15);
+}
+
 /* ── AudD live indicator ──────────────────────────────────────── */
 
 .live-indicator {

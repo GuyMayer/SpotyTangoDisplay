@@ -32,8 +32,30 @@ const Control = (() => {
 
   function _getOrchestraBio(artistName) {
     if (!artistName || !_orchestras) return null;
-    const key = artistName.toLowerCase().trim();
-    return _orchestras[key] || null;
+    
+    // Normalize: lowercase, trim, remove accents
+    let key = artistName.toLowerCase().trim();
+    key = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    
+    // Try exact match first
+    if (_orchestras[key]) return _orchestras[key];
+    
+    // Strip common orchestra suffixes and try again
+    const patterns = [
+      / y su orquesta tipica$/,
+      / y su orquesta tpica$/,  // without accent
+      / and his orchestra$/,
+      / y su orquesta$/,
+      / orquesta$/,
+      /'s orchestra$/,
+    ];
+    
+    for (const pattern of patterns) {
+      const stripped = key.replace(pattern, '').trim();
+      if (_orchestras[stripped]) return _orchestras[stripped];
+    }
+    
+    return null;
   }
 
   // ── Local setup nudge for GitHub Pages visitors ──────────────────────────
@@ -202,50 +224,23 @@ const Control = (() => {
   // ── Version check + update modal ─────────────────────────────────────────
 
   async function _checkVersion() {
-    // Show installed version immediately
-    const installedEl = document.getElementById('about-installed-ver');
-    if (installedEl) installedEl.textContent = 'v' + CONFIG.app.version;
-
+    // Check for newer version and show update modal if available
     try {
       const resp = await fetch(
         'https://raw.githubusercontent.com/GuyMayer/SpotyTangoDisplay/main/version.txt',
         { cache: 'no-cache' }
       );
-      if (!resp.ok) {
-        const latestEl = document.getElementById('about-latest-ver');
-        if (latestEl) latestEl.textContent = 'unavailable';
-        return;
-      }
+      if (!resp.ok) return;
+      
       const remote = resp.text ? (await resp.text()).trim() : '';
       if (!remote) return;
 
       const local = CONFIG.app.version;
-      const latestEl  = document.getElementById('about-latest-ver');
-      const updateBtn = document.getElementById('about-update-btn');
 
-      if (latestEl) latestEl.textContent = 'v' + remote;
+      // Up to date — no modal needed
+      if (_compareVersions(remote, local) <= 0) return;
 
-      if (_compareVersions(remote, local) <= 0) {
-        // Up to date
-        if (updateBtn) {
-          updateBtn.textContent = '✓ Up to Date';
-          updateBtn.style.background = '#1a3a1a';
-          updateBtn.style.color = '#4caf50';
-          updateBtn.style.border = '1px solid #2a4a2a';
-          updateBtn.removeAttribute('href');
-        }
-        return;
-      }
-
-      // Newer version available — highlight button + show modal
-      if (updateBtn) {
-        updateBtn.textContent = '⬆ Update to v' + remote;
-        updateBtn.style.background = 'var(--accent)';
-        updateBtn.style.color = '#000';
-        updateBtn.style.border = 'none';
-      }
-
-      // Show modal if not dismissed (dismissal lasts 7 days)
+      // Newer version available — show modal if not dismissed (dismissal lasts 7 days)
       const dismissed = (() => {
         try { return JSON.parse(localStorage.getItem('spotd_update_dismissed') || 'null'); } catch { return null; }
       })();
@@ -269,8 +264,7 @@ const Control = (() => {
         });
       }
     } catch {
-      const latestEl = document.getElementById('about-latest-ver');
-      if (latestEl) latestEl.textContent = 'unavailable';
+      // Network error — silent fail
     }
   }
 
@@ -1129,8 +1123,18 @@ const Control = (() => {
       return;
     }
 
+    // 1. Try Wikipedia (free, no key) — instant, works for famous orchestras
+    const wikiBio = await _tryWikipediaOrchestra(artistName);
+    if (wikiBio) {
+      _orchestraBioCache[key] = wikiBio;
+      try { localStorage.setItem(ORCHESTRA_CACHE_KEY, JSON.stringify(_orchestraBioCache)); } catch (e) {}
+      _pushState(Object.assign({}, basePayload, { orchestraBio: wikiBio }));
+      return;
+    }
+
+    // 2. Fallback: OpenRouter AI (configured, works for any orchestra incl. modern)
     const apiKey = localStorage.getItem('spotd_openrouter_key');
-    if (!apiKey) return;
+    if (!apiKey) { _orchestraBioCache[key] = null; return; }
 
     try {
       const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -1146,7 +1150,7 @@ const Control = (() => {
           max_tokens: 300,
           messages: [{
             role: 'user',
-            content: 'You are a tango historian. Return a JSON object (no markdown, no explanation) for the Argentine tango orchestra "' + artistName + '" with these fields: name (string), nickname (string or null), era (string, e.g. "1940 – 1960"), style (short phrase), characteristics (array of 3-4 short strings), notable_singers (array of up to 3 names). If unknown, make a reasonable historical estimate.',
+            content: 'You are a tango historian. Return a JSON object (no markdown, no explanation) for the orchestra "' + artistName + '" with these fields: name (string), nickname (string or null), era (string, e.g. "1940 – 1960"), style (short phrase), characteristics (array of 3-4 short strings), notable_singers (array of up to 3 names). If unknown, make a reasonable estimate.',
           }],
         }),
       });
@@ -1154,7 +1158,6 @@ const Control = (() => {
       const data = await resp.json();
       const raw = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
       if (!raw) { _orchestraBioCache[key] = null; return; }
-      // Strip possible markdown fences
       const jsonStr = raw.replace(/^```[\s\S]*?\n/, '').replace(/```$/, '').trim();
       const bio = JSON.parse(jsonStr);
       _orchestraBioCache[key] = bio;
@@ -1163,6 +1166,40 @@ const Control = (() => {
     } catch (e) {
       _orchestraBioCache[key] = null;
     }
+  }
+
+  // Fetch a clean orchestra bio from Wikipedia (returns null if not found)
+  async function _tryWikipediaOrchestra(artistName) {
+    const variants = [
+      artistName,
+      artistName.replace(/ y su orquesta.*/i, ''),
+      artistName.replace(/\s+orchestra$/i, ''),
+      artistName + ' (orchestra)',
+    ];
+    for (const variant of variants) {
+      try {
+        const resp = await fetch(
+          'https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(variant)
+        );
+        if (!resp.ok) continue;
+        const d = await resp.json();
+        if (d.type === 'disambiguation' || !d.extract) continue;
+        const extract = d.extract.trim();
+        // Sanity check: skip non-orchestra pages (e.g. random people with same name)
+        const lc = extract.toLowerCase();
+        const looksOrchestral = /orchestra|tango|bandoneón|bandoneon|bandleader|conductor|composer|musician/i.test(extract);
+        if (!looksOrchestral) continue;
+        return {
+          name: artistName,
+          nickname: '',
+          era: '',
+          style: extract.split(/(?<=\.)\s/)[0],
+          characteristics: [extract],
+          notable_singers: [],
+        };
+      } catch (_) { /* try next */ }
+    }
+    return null;
   }
 
   async function _maybeTranslateTitle(title, basePayload) {
@@ -1312,6 +1349,7 @@ const Control = (() => {
     const addBtn      = document.getElementById('lt-add-btn');
     const loadBtn     = document.getElementById('lt-load-btn');
     const contribBtn  = document.getElementById('lt-contribute-btn');
+    const populateBtn = document.getElementById('lt-populate-btn');
     const countEl     = document.getElementById('lt-count');
     const statusEl    = document.getElementById('lt-status');
     const addStatus   = document.getElementById('lt-add-status');
@@ -1372,7 +1410,22 @@ const Control = (() => {
         }
 
         if (typeof TangoDB !== 'undefined') {
-          TangoDB.addLocalTrack(title, artist, { type, year, singer });
+          try {
+            TangoDB.addLocalTrack(title, artist, { type, year, singer });
+            console.log('[control] Added local track:', title.trim() + ' / ' + artist.trim(), { type, year, singer });
+          } catch (err) {
+            console.error('[control] Failed to add local track:', err);
+            if (addStatus) {
+              addStatus.textContent = '✗ Save failed: ' + err.message;
+              return;
+            }
+          }
+        } else {
+          console.error('[control] TangoDB not loaded');
+          if (addStatus) {
+            addStatus.textContent = '✗ TangoDB module not loaded';
+            return;
+          }
         }
 
         // Clear form
@@ -1394,6 +1447,9 @@ const Control = (() => {
     if (contribBtn) {
       contribBtn.addEventListener('click', async () => {
         const tracks = typeof TangoDB !== 'undefined' ? TangoDB.getLocalTracks() : {};
+        console.log('[control] Local tracks for contribute:', tracks);
+        console.log('[control] localStorage spotd_local_tracks:', localStorage.getItem('spotd_local_tracks'));
+        
         if (Object.keys(tracks).length === 0) {
           if (statusEl) statusEl.textContent = 'No local additions to contribute.';
           return;
@@ -1431,6 +1487,139 @@ const Control = (() => {
         contribBtn.disabled = false;
       });
     }
+
+    if (populateBtn) {
+      populateBtn.addEventListener('click', () => _populatePlaylistTracks(statusEl, populateBtn, _refreshCount));
+    }
+  }
+
+  // ── Populate from Playlist ────────────────────────────────────────────────
+
+  async function _populatePlaylistTracks(statusEl, btn, onDone) {
+    if (btn) btn.disabled = true;
+    if (statusEl) statusEl.textContent = 'Reading current playlist…';
+
+    // 1. Get current playback context
+    const playback = await Spotify.getCurrentlyPlaying();
+    if (!playback || !playback.context || playback.context.type !== 'playlist') {
+      if (statusEl) statusEl.textContent = '⚠ Play a Spotify playlist first, then try again.';
+      if (btn) btn.disabled = false;
+      return;
+    }
+
+    // Extract playlist ID from context URI  e.g. spotify:playlist:37i9dQZF...
+    const uriParts = playback.context.uri.split(':');
+    const playlistId = uriParts[uriParts.length - 1];
+
+    // 2. Fetch up to 100 tracks (2 pages of 50)
+    if (statusEl) statusEl.textContent = 'Fetching playlist tracks…';
+    const tracks = await Spotify.getPlaylistTracks(playlistId, 100);
+    if (!tracks || tracks.length === 0) {
+      if (statusEl) statusEl.textContent = '⚠ Could not read playlist tracks.';
+      if (btn) btn.disabled = false;
+      return;
+    }
+
+    // 3. Find which tracks are NOT already in TangoDB (main or local)
+    const missing = [];
+    for (const t of tracks) {
+      if (!t || !t.name) continue;
+      const artistName = (t.artists && t.artists[0] && t.artists[0].name) || '';
+      const result = typeof TangoDB !== 'undefined'
+        ? TangoDB.lookupSync(t.name, artistName)
+        : { type: null };
+      if (!result.type) {
+        const year = (t.album && t.album.release_date && t.album.release_date.slice(0, 4)) || '';
+        missing.push({ title: t.name, artist: artistName, year });
+      }
+    }
+
+    if (missing.length === 0) {
+      if (statusEl) statusEl.textContent = '✓ All ' + tracks.length + ' tracks already in database.';
+      if (btn) btn.disabled = false;
+      return;
+    }
+
+    // Cap at 50 missing entries per run
+    const toPopulate = missing.slice(0, 50);
+    if (statusEl) statusEl.textContent = 'Populating ' + toPopulate.length + ' missing tracks…';
+
+    const apiKey = localStorage.getItem('spotd_openrouter_key');
+    if (!apiKey) {
+      // No AI key — add tracks with year only (type/singer unknown)
+      for (const t of toPopulate) {
+        if (typeof TangoDB !== 'undefined') TangoDB.addLocalTrack(t.title, t.artist, { year: t.year });
+      }
+      if (statusEl) statusEl.textContent = '✓ Added ' + toPopulate.length + ' tracks (year only — add OpenRouter key for type/singer).';
+      if (onDone) onDone();
+      if (btn) btn.disabled = false;
+      return;
+    }
+
+    // 4. Batch to OpenRouter AI: groups of 25 to stay under token limit
+    const BATCH = 25;
+    let populated = 0;
+    const VALID_TYPES = ['Tango', 'Milonga', 'Vals', 'Cortina'];
+
+    for (let i = 0; i < toPopulate.length; i += BATCH) {
+      const batch = toPopulate.slice(i, i + BATCH);
+      if (statusEl) statusEl.textContent = 'Populating… ' + Math.min(i + BATCH, toPopulate.length) + ' / ' + toPopulate.length;
+
+      const prompt = 'You are a tango music expert. For each track below, return a JSON array (no markdown) ' +
+        'where each object has: title (string), type ("Tango"|"Milonga"|"Vals"|"Cortina"|"Unknown"), singer (string or null). ' +
+        'Return exactly one object per track in the same order. ' +
+        'Tracks:\n' + batch.map((t, idx) => (idx + 1) + '. "' + t.title + '" by ' + t.artist).join('\n');
+
+      try {
+        const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + apiKey,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': window.location.origin + '/',
+          },
+          body: JSON.stringify({
+            models: ['openai/gpt-oss-20b:free', 'openai/gpt-oss-120b:free', 'meta-llama/llama-3.3-70b-instruct:free'],
+            route: 'fallback',
+            max_tokens: 800,
+            messages: [{ role: 'user', content: prompt }],
+          }),
+        });
+
+        if (resp.ok) {
+          const data = await resp.json();
+          const raw = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+          if (raw) {
+            const jsonStr = raw.replace(/^```[\s\S]*?\n/, '').replace(/```$/, '').trim();
+            const results = JSON.parse(jsonStr);
+            if (Array.isArray(results)) {
+              results.forEach((r, idx) => {
+                const t = batch[idx];
+                if (!t) return;
+                // Validate before writing
+                const type = VALID_TYPES.includes(r.type) ? r.type : '';
+                const singer = (typeof r.singer === 'string' && r.singer.length <= 80) ? r.singer : '';
+                const year = t.year || '';
+                if (typeof TangoDB !== 'undefined') {
+                  TangoDB.addLocalTrack(t.title, t.artist, { type, year, singer });
+                  populated++;
+                }
+              });
+            }
+          }
+        }
+      } catch (e) {
+        // Batch failed — still add with year only
+        for (const t of batch) {
+          if (typeof TangoDB !== 'undefined') TangoDB.addLocalTrack(t.title, t.artist, { year: t.year });
+          populated++;
+        }
+      }
+    }
+
+    if (statusEl) statusEl.textContent = '✓ Populated ' + populated + ' / ' + toPopulate.length + ' missing tracks.';
+    if (onDone) onDone();
+    if (btn) btn.disabled = false;
   }
 
   function _bindSettingsBackup() {

@@ -323,5 +323,148 @@
       "Introduced tango to a new generation"
     ],
     "notable_singers": ["Cristina Vilallonga"]
+  },
+  "otros aires": {
+    "name": "Otros Aires",
+    "nickname": "",
+    "era": "2003 – present",
+    "style": "Electrotango, roots fusion",
+    "characteristics": [
+      "Argentine group founded in Barcelona by Miguel Di Genova",
+      "Blends electronic elements with acoustic tango roots",
+      "Accessible to non-tango audiences",
+      "Traditional melodies with modern production"
+    ],
+    "notable_singers": ["Melanie Gardyn"]
+  },
+  "bajofondo": {
+    "name": "Bajofondo",
+    "nickname": "Bajofondo Tango Club",
+    "era": "2002 – present",
+    "style": "Electrotango, Rio Plata sound",
+    "characteristics": [
+      "Supergroup led by Gustavo Santaolalla and Juan Campodónico",
+      "Latin Grammy winners",
+      "Electronic production with live bandoneon and strings",
+      "Used in contemporary tango shows worldwide"
+    ],
+    "notable_singers": []
+  },
+  "tanghetto": {
+    "name": "Tanghetto",
+    "nickname": "",
+    "era": "2003 – present",
+    "style": "Neotango, electrotango",
+    "characteristics": [
+      "Argentine duo Max Masri and Diego Velázquez",
+      "Grammy-nominated for Hybrid Tango album",
+      "Strong rhythmic programming under classic tango melodies",
+      "Popular on modern milonga circuits"
+    ],
+    "notable_singers": []
+  },
+  "narcotango": {
+    "name": "Narcotango",
+    "nickname": "",
+    "era": "2005 – present",
+    "style": "Neotango, electronic tango",
+    "characteristics": [
+      "Project by Carlos Libedinsky",
+      "Known for the album Narcotango (2005)",
+      "Deep electronic textures under traditional tango structures",
+      "Widely used in tango nuevo choreography"
+    ],
+    "notable_singers": []
+  },
+  "sexteto mayor": {
+    "name": "Sexteto Mayor",
+    "nickname": "",
+    "era": "1973 – present",
+    "style": "Traditional, elegant chamber tango",
+    "characteristics": [
+      "Founded by José Libertella and Luis Stazo",
+      "Classic sextet format: 2 bandoneons, 2 violins, piano, bass",
+      "Repertoire drawn from golden age masters",
+      "Used for both milonga and stage performance"
+    ],
+    "notable_singers": []
+  },
+  "quinteto real": {
+    "name": "Quinteto Real",
+    "nickname": "",
+    "era": "1962 – present",
+    "style": "Traditional, chamber tango",
+    "characteristics": [
+      "Founded by Horacio Salgán",
+      "One of the most respected traditional ensembles",
+      "Precise, refined execution of golden age repertoire",
+      "Bandoneon, violin, piano, guitar, double bass format"
+    ],
+    "notable_singers": []
+  },
+  "orquesta el arranque": {
+    "name": "Orquesta El Arranque",
+    "nickname": "",
+    "era": "1990 – present",
+    "style": "Traditional, golden age revival",
+    "characteristics": [
+      "Buenos Aires orchestra dedicated to golden age style",
+      "Strong D'Arienzo and Di Sarli influences",
+      "Danceable, clear rhythm section",
+      "Respected at milongas worldwide"
+    ],
+    "notable_singers": []
+  },
+  "color tango": {
+    "name": "Color Tango",
+    "nickname": "",
+    "era": "1990 – present",
+    "style": "Traditional, dramatic",
+    "characteristics": [
+      "Argentine orchestra led by Roberto Álvarez",
+      "Strong Pugliese and De Angelis influence",
+      "Rich orchestration with emotional intensity",
+      "Popular at milongas for its danceability"
+    ],
+    "notable_singers": []
+  },
+  "fernandez fierro": {
+    "name": "Orquesta Típica Fernández Fierro",
+    "nickname": "Fierro",
+    "era": "2002 – present",
+    "style": "Traditional with raw energy",
+    "characteristics": [
+      "Buenos Aires collective with rotating membership",
+      "Known for intense, raw performances",
+      "Blends golden age respect with contemporary attitude",
+      "Strong Pugliese influence"
+    ],
+    "notable_singers": []
+  },
+  "la chicana": {
+    "name": "La Chicana",
+    "nickname": "",
+    "era": "1997 – present",
+    "style": "Tango canción, intimate, literary",
+    "characteristics": [
+      "Led by Dolores Solá",
+      "Focuses on tango as song rather than dance music",
+      "Poetic, literary approach to tango lyrics",
+      "Chamber trio format"
+    ],
+    "notable_singers": ["Dolores Solá"]
+  },
+  "pablo ziegler": {
+    "name": "Pablo Ziegler",
+    "nickname": "",
+    "era": "1986 – present",
+    "style": "Jazz tango, nuevo tango",
+    "characteristics": [
+      "Pianist, former member of Astor Piazzolla's quintet",
+      "Grammy winner for jazz tango fusion",
+      "Bridge between tango tradition and jazz improvisation",
+      "Used in both concert and milonga nuevo settings"
+    ],
+    "notable_singers": []
   }
 }

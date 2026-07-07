@@ -111,11 +111,92 @@ $exitItem.Add_Click({
     [System.Windows.Forms.Application]::Exit()
 })
 
-$menu.Items.Add($openItem) | Out-Null
-$menu.Items.Add($sep)      | Out-Null
-$menu.Items.Add($debugItem) | Out-Null
-$menu.Items.Add($sep2)     | Out-Null
-$menu.Items.Add($exitItem) | Out-Null
+$menu.Items.Add($openItem)  | Out-Null
+$menu.Items.Add($sep)       | Out-Null
+
+# Update menu item - text updated dynamically when update check completes
+$updateItem      = New-Object System.Windows.Forms.ToolStripMenuItem
+$updateItem.Text = "Check for Updates..."
+$updateItem.Add_Click({
+    $script:UpdateAvailableVersion = $script:UpdateAvailableVersion  # capture
+    if (-not $script:UpdateAvailableVersion) {
+        $localVer = try { (Get-Content "$PSScriptRoot\version.txt" -ErrorAction Stop).Trim() } catch { "unknown" }
+        [System.Windows.Forms.MessageBox]::Show(
+            "You are running the latest version ($localVer).",
+            "SpotyTangoDisplay - Up to Date",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Information) | Out-Null
+        return
+    }
+    $answer = [System.Windows.Forms.MessageBox]::Show(
+        "Version $($script:UpdateAvailableVersion) is available.`n`nDownload and install now?`n(The relay will restart automatically.)",
+        "SpotyTangoDisplay Update",
+        [System.Windows.Forms.MessageBoxButtons]::YesNo,
+        [System.Windows.Forms.MessageBoxIcon]::Question)
+    if ($answer -ne [System.Windows.Forms.DialogResult]::Yes) { return }
+
+    $tray.BalloonTipTitle = "SpotyTangoDisplay"
+    $tray.BalloonTipText  = "Downloading update..."
+    $tray.BalloonTipIcon  = [System.Windows.Forms.ToolTipIcon]::Info
+    $tray.ShowBalloonTip(5000)
+    $updateItem.Enabled = $false
+
+    $installerUrl  = "https://github.com/GuyMayer/SpotyTangoDisplay/releases/latest/download/SpotyTangoDisplay-Setup.exe"
+    $installerPath = "$env:TEMP\SpotyTangoDisplay-Setup.exe"
+    $installRoot   = $PSScriptRoot
+
+    $dlJob = Start-Job -ScriptBlock {
+        param($url, $dest)
+        try {
+            $wc = New-Object System.Net.WebClient
+            $wc.Proxy = $null
+            $wc.DownloadFile($url, $dest)
+            return "ok"
+        } catch {
+            return "error: $($_.Exception.Message)"
+        }
+    } -ArgumentList $installerUrl, $installerPath
+
+    $dlTimer          = New-Object System.Windows.Forms.Timer
+    $dlTimer.Interval = 1000
+    $dlTimer.Add_Tick({
+        if ($dlJob.State -eq "Completed") {
+            $dlTimer.Stop()
+            $result = Receive-Job $dlJob; Remove-Job $dlJob
+            if ($result -eq "ok") {
+                # Run installer silently - /S = silent, /D = install dir
+                Start-Process -FilePath $installerPath `
+                    -ArgumentList "/S /D=`"$installRoot`"" `
+                    -Wait:$false
+                # Quit tray so installer can overwrite files then restart
+                Start-Sleep -Milliseconds 1500
+                $tray.Visible = $false
+                if ($relay -and -not $relay.HasExited) {
+                    Stop-Process -Id $relay.Id -Force -ErrorAction SilentlyContinue
+                }
+                [System.Windows.Forms.Application]::Exit()
+            } else {
+                [System.Windows.Forms.MessageBox]::Show(
+                    "Download failed:`n$result`n`nPlease update manually from the website.",
+                    "Update Failed",
+                    [System.Windows.Forms.MessageBoxButtons]::OK,
+                    [System.Windows.Forms.MessageBoxIcon]::Error) | Out-Null
+                $updateItem.Enabled = $true
+            }
+        } elseif ($dlJob.State -eq "Failed") {
+            $dlTimer.Stop(); Remove-Job $dlJob -Force
+            $updateItem.Enabled = $true
+        }
+    })
+    $dlTimer.Start()
+})
+
+$sep1b = New-Object System.Windows.Forms.ToolStripSeparator
+$menu.Items.Add($updateItem) | Out-Null
+$menu.Items.Add($sep1b)      | Out-Null
+$menu.Items.Add($debugItem)  | Out-Null
+$menu.Items.Add($sep2)       | Out-Null
+$menu.Items.Add($exitItem)   | Out-Null
 
 $tray.ContextMenuStrip = $menu
 $tray.Add_DoubleClick({ Start-Process "http://localhost:3456/" })
@@ -123,7 +204,7 @@ $tray.Add_DoubleClick({ Start-Process "http://localhost:3456/" })
 # Balloon tip on startup
 $tray.ShowBalloonTip(3000, "SpotyTangoDisplay", "Relay running - double-click to open.", [System.Windows.Forms.ToolTipIcon]::Info)
 
-# Poll for relay readiness in background — never block the UI thread
+# Poll for relay readiness in background - never block the UI thread
 $pollJob = Start-Job -ScriptBlock {
     for ($i = 0; $i -lt 60; $i++) {
         try {
@@ -159,6 +240,8 @@ $timer.Add_Tick({
 $timer.Start()
 
 # Check for updates in background (compare local version.txt vs GitHub)
+$script:UpdateAvailableVersion = $null
+
 $updateJob = Start-Job {
     try {
         $local  = (Get-Content "$using:PSScriptRoot\version.txt" -ErrorAction Stop).Trim()
@@ -178,15 +261,21 @@ $updateTimer.Add_Tick({
         $newVer = Receive-Job $updateJob
         Remove-Job $updateJob
         if ($newVer) {
-            $tray.BalloonTipTitle   = "SpotyTangoDisplay Update"
-            $tray.BalloonTipText    = "Version $newVer available - click to install"
-            $tray.BalloonTipIcon    = [System.Windows.Forms.ToolTipIcon]::Info
+            $script:UpdateAvailableVersion = $newVer
+            $updateItem.Text = "Update to v$newVer Available!"
+            $updateItem.Font = New-Object System.Drawing.Font($updateItem.Font, [System.Drawing.FontStyle]::Bold)
+            $tray.BalloonTipTitle = "SpotyTangoDisplay Update"
+            $tray.BalloonTipText  = "Version $newVer available - right-click tray icon to install"
+            $tray.BalloonTipIcon  = [System.Windows.Forms.ToolTipIcon]::Info
             $tray.ShowBalloonTip(8000)
-            $tray.Add_BalloonTipClicked({ Start-Process "https://display.tangopassion.co.uk/download.html" })
+        } else {
+            $localVer = try { (Get-Content "$PSScriptRoot\version.txt" -ErrorAction Stop).Trim() } catch { "" }
+            $updateItem.Text = "Up to Date (v$localVer)"
         }
     } elseif ($updateCheckCount -ge 6) {
         $updateTimer.Stop()
         Remove-Job $updateJob -Force
+        $updateItem.Text = "Check for Updates"
     }
 })
 $updateTimer.Start()

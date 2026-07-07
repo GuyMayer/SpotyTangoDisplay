@@ -6,7 +6,7 @@ const Wizard = (() => {
   const STORAGE_STEP = 'spotd_wizard_step';   // resume step if closed mid-way
 
   let _currentStep = 1;
-  const TOTAL_STEPS = 10;
+  const TOTAL_STEPS = 11;
 
   // ── Step definitions ──────────────────────────────────────────────────────
 
@@ -20,7 +20,8 @@ const Wizard = (() => {
     7: { id: 'branding',  title: 'Branding'         },
     8: { id: 'cortina',   title: 'Cortina Rules'    },
     9: { id: 'design',    title: 'Display Design'   },
-    10: { id: 'done',     title: 'Done!'            },
+    10: { id: 'about',    title: 'About'            },
+    11: { id: 'done',     title: 'Done!'            },
   };
 
   // ── Public entry points ───────────────────────────────────────────────────
@@ -144,8 +145,8 @@ const Wizard = (() => {
     if (nextBtn) nextBtn.classList.toggle('hidden', _currentStep === TOTAL_STEPS);
     if (doneBtn) doneBtn.classList.toggle('hidden', _currentStep !== TOTAL_STEPS);
     if (skipBtn) {
-      // Skip visible on optional steps 4, 5, 6, and 8
-      skipBtn.classList.toggle('hidden', ![4, 5, 6, 8, 9].includes(_currentStep));
+      // Skip visible on optional steps 4, 5, 6, 8, 9, 10
+      skipBtn.classList.toggle('hidden', ![4, 5, 6, 8, 9, 10].includes(_currentStep));
     }
   }
 
@@ -166,7 +167,8 @@ const Wizard = (() => {
       case 7: _renderBranding(body);  break;
       case 8: _renderCortina(body);   break;
       case 9: _renderDesign(body);    break;
-      case 10: _renderDone(body);     break;
+      case 10: _renderAbout(body);    break;
+      case 11: _renderDone(body);     break;
     }
   }
 
@@ -252,6 +254,14 @@ const Wizard = (() => {
         setTimeout(() => { document.getElementById('wiz-copy-redirect').textContent = 'Copy'; }, 2000);
       });
     });
+
+    // Populate Spotify Client ID from localStorage (password fields don't auto-fill from value attr)
+    const spotifyInput = document.getElementById('wiz-spotify-client-id');
+    if (spotifyInput && clientId) {
+      spotifyInput.value = clientId;
+      // Trigger the input event to show/hide dashboard link
+      spotifyInput.dispatchEvent(new Event('input'));
+    }
 
     // Update dashboard link as user types client ID
     document.getElementById('wiz-spotify-client-id').addEventListener('input', e => {
@@ -412,17 +422,21 @@ const Wizard = (() => {
       <button id="wiz-audd-test" class="wiz-btn secondary">Test (record 4s → identify)</button>
     `;
 
+    // Set up password toggle (must be outside click handler)
+    const keyInput = document.getElementById('wiz-audd-key');
+    const auddToggle = document.getElementById('wiz-audd-toggle');
+    if (auddToggle && keyInput) {
+      // Populate value from localStorage (password fields don't auto-fill from value attr)
+      if (existingKey) keyInput.value = existingKey;
+      
+      auddToggle.addEventListener('click', () => {
+        const isPw = keyInput.type === 'password';
+        keyInput.type = isPw ? 'text' : 'password';
+        auddToggle.textContent = isPw ? '🙈' : '👁';
+      });
+    }
+
     document.getElementById('wiz-audd-test').addEventListener('click', async () => {
-      const keyInput = document.getElementById('wiz-audd-key');
-      // Show/hide toggle
-      const auddToggle = document.getElementById('wiz-audd-toggle');
-      if (auddToggle && keyInput) {
-        auddToggle.addEventListener('click', () => {
-          const isPw = keyInput.type === 'password';
-          keyInput.type = isPw ? 'text' : 'password';
-          auddToggle.textContent = isPw ? '🙈' : '👁';
-        });
-      }
       const statusEl = document.getElementById('wiz-audd-status');
       const key = keyInput.value.trim();
       if (!key) { statusEl.textContent = '\u2717 Enter a token first'; statusEl.className = 'wiz-status error'; return; }
@@ -493,19 +507,21 @@ const Wizard = (() => {
       <button id="wiz-lastfm-test" class="wiz-btn secondary">Test (La Cumparsita by Rodríguez)</button>
     `;
 
+    // Set up password toggle (must be outside click handler)
+    const input = document.getElementById('wiz-lastfm-key');
+    const lfmToggle = document.getElementById('wiz-lastfm-toggle');
+    if (lfmToggle && input) {
+      // Populate value from localStorage (password fields don't auto-fill from value attr)
+      if (existingKey) input.value = existingKey;
+      
+      lfmToggle.addEventListener('click', () => {
+        const isPw = input.type === 'password';
+        input.type = isPw ? 'text' : 'password';
+        lfmToggle.textContent = isPw ? '🙈' : '👁';
+      });
+    }
+
     document.getElementById('wiz-lastfm-test').addEventListener('click', async () => {
-      const input   = document.getElementById('wiz-lastfm-key');
-      if (input) {
-        // Show/hide toggle
-        const lfmToggle = document.getElementById('wiz-lastfm-toggle');
-        if (lfmToggle) {
-          lfmToggle.addEventListener('click', () => {
-            const isPw = input.type === 'password';
-            input.type = isPw ? 'text' : 'password';
-            lfmToggle.textContent = isPw ? '🙈' : '👁';
-          });
-        }
-      }
       const statusEl = document.getElementById('wiz-lastfm-status');
       const key = input.value.trim();
       statusEl.textContent = 'Looking up…'; statusEl.className = 'wiz-status';
@@ -569,19 +585,22 @@ const Wizard = (() => {
       <button id="wiz-openrouter-test" class="wiz-btn secondary">Test</button>
     `;
 
+    // Set up password toggle (must be outside click handler)
+    const input = document.getElementById('wiz-openrouter-key');
+    const orToggle = document.getElementById('wiz-openrouter-toggle');
+    if (orToggle && input) {
+      // Populate value from localStorage (password fields don't auto-fill from value attr)
+      if (existingKey) input.value = existingKey;
+      
+      orToggle.addEventListener('click', () => {
+        const isPw = input.type === 'password';
+        input.type = isPw ? 'text' : 'password';
+        orToggle.textContent = isPw ? '🙈' : '👁';
+      });
+    }
+
     document.getElementById('wiz-openrouter-test').addEventListener('click', async () => {
-      const input   = document.getElementById('wiz-openrouter-key');
-      if (input) {
-        // Show/hide toggle
-        const orToggle = document.getElementById('wiz-openrouter-toggle');
-        if (orToggle) {
-          orToggle.addEventListener('click', () => {
-            const isPw = input.type === 'password';
-            input.type = isPw ? 'text' : 'password';
-            orToggle.textContent = isPw ? '🙈' : '👁';
-          });
-        }
-      }
+      const input = document.getElementById('wiz-openrouter-key');
       const statusEl = document.getElementById('wiz-openrouter-status');
       const key = input.value.trim();
       if (!key) { statusEl.textContent = '\u2717 Enter a key first'; statusEl.className = 'wiz-status error'; return; }
@@ -903,6 +922,87 @@ const Wizard = (() => {
     a.download = 'TangoPassion_Settings.skp';
     a.click();
     URL.revokeObjectURL(a.href);
+  }
+
+  function _renderAbout(body) {
+    body.innerHTML = `
+      <h2>About</h2>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:14px;color:var(--text-muted,#888)">Installed:</span>
+        <span id="wiz-about-installed-ver" style="font-size:14px;color:var(--text,#fff)">v${_esc(typeof CONFIG !== 'undefined' ? CONFIG.app.version : '—')}</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <span style="font-size:14px;color:var(--text-muted,#888)">Latest:</span>
+        <span id="wiz-about-latest-ver" style="font-size:14px;color:var(--text,#fff)">checking…</span>
+      </div>
+      <a id="wiz-about-update-btn" href="https://guymayer.github.io/SpotyTangoDisplay/download.html" target="_blank" rel="noopener" class="wiz-btn primary" style="display:inline-block;text-align:center;width:100%;box-sizing:border-box;margin-bottom:16px">Update Now</a>
+      <div id="wiz-about-status" style="font-size:12px;color:var(--accent);text-align:center;min-height:16px;margin-bottom:12px"></div>
+      <p style="font-size:11px;color:var(--text-muted,#888);text-align:center;margin:8px 0"><a href="https://guymayer.github.io/SpotyTangoDisplay/download.html" target="_blank" rel="noopener" style="color:var(--text-muted,#888)">tangopassion download page</a></p>
+    `;
+
+    // Check for updates
+    _checkVersionInWizard();
+  }
+
+  async function _checkVersionInWizard() {
+    const installedEl = document.getElementById('wiz-about-installed-ver');
+    const latestEl    = document.getElementById('wiz-about-latest-ver');
+    const updateBtn   = document.getElementById('wiz-about-update-btn');
+    const statusEl    = document.getElementById('wiz-about-status');
+
+    if (!installedEl || !latestEl || !updateBtn) return;
+
+    const local = typeof CONFIG !== 'undefined' ? CONFIG.app.version : '—';
+    installedEl.textContent = 'v' + local;
+
+    try {
+      const resp = await fetch(
+        'https://raw.githubusercontent.com/GuyMayer/SpotyTangoDisplay/main/version.txt',
+        { cache: 'no-cache' }
+      );
+      if (!resp.ok) {
+        latestEl.textContent = 'unavailable';
+        return;
+      }
+      const remote = (await resp.text()).trim();
+      if (!remote) return;
+
+      latestEl.textContent = 'v' + remote;
+
+      // Compare versions
+      const cmp = _compareVersions(remote, local);
+      if (cmp <= 0) {
+        // Up to date
+        updateBtn.textContent = '✓ Up to Date';
+        updateBtn.style.background = '#1a3a1a';
+        updateBtn.style.color = '#4caf50';
+        updateBtn.style.border = '1px solid #2a4a2a';
+        updateBtn.removeAttribute('href');
+        if (statusEl) statusEl.textContent = '';
+      } else {
+        // Update available
+        updateBtn.textContent = '⬆ Update to v' + remote;
+        updateBtn.style.background = 'var(--accent)';
+        updateBtn.style.color = '#000';
+        updateBtn.style.border = 'none';
+        if (statusEl) statusEl.textContent = 'A newer version is available!';
+      }
+    } catch (err) {
+      latestEl.textContent = 'check failed';
+      if (statusEl) statusEl.textContent = '';
+    }
+  }
+
+  function _compareVersions(a, b) {
+    const pa = a.split('.').map(Number);
+    const pb = b.split('.').map(Number);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+      const da = pa[i] || 0;
+      const db = pb[i] || 0;
+      if (da > db) return 1;
+      if (da < db) return -1;
+    }
+    return 0;
   }
 
   function _renderDone(body) {

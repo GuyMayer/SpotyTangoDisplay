@@ -5,12 +5,12 @@
 
 ## What It Is
 
-A web app for tango DJs and teachers that displays live track info on a dancer
+A desktop app for tango DJs and teachers that displays live track info on a dancer
 screen — at milongas, lessons, or workshops. Two surfaces:
 
 1. **Software** — browser-based control panel + fullscreen display, served by a
-   zero-dependency Node.js local relay. GitHub Pages hosts the UI; the relay
-   runs on the DJ's laptop.
+   zero-dependency Node.js local relay running on the DJ's laptop. GitHub Pages
+   hosts the UI files only — **not a hosted service**, download required.
 2. **Venue Kit** — portable hardware kit (router + Android TV stick) for
    deploying the display on any venue TV without touching the venue's network.
 

@@ -34,6 +34,9 @@ const TangoDB = (() => {
 
   function _norm(s) {
     if (!s) return '';
+    // Strip common Spotify title suffixes before normalising
+    s = s.replace(/\s*[-–([]?\s*(remaster(?:ed|izado)?|live|mono|stereo|version)\b[^)]*[)\]]?/gi, '');
+    s = s.replace(/\s*\(\d{4}\s+remaster[^)]*\)/gi, '');
     s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     s = s.toLowerCase();
     s = s.replace(/[^a-z0-9 ]/g, '');
@@ -259,12 +262,54 @@ const TangoDB = (() => {
     return { type: null, year: null, singer: null, source: 'none' };
   }
 
+  // ── Search by title across ALL orchestras ────────────────────────────────
+  // Returns array of { artist, type, year, singer } sorted by year ascending.
+  // Used for song provenance display when the playing orchestra is not in DB.
+
+  function searchByTitle(title) {
+    if (!_db || !title) return [];
+    const t = _norm(title);
+    if (!t) return [];
+    const results = [];
+    const keys = Object.keys(_db);
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      const sep = key.indexOf('|');
+      if (sep < 0) continue;
+      if (key.slice(0, sep) !== t) continue;
+      const entry = _db[key];
+      results.push({
+        artist: key.slice(sep + 1),
+        type:   TYPE_LABELS[entry.t] || entry.t || null,
+        year:   entry.y ? parseInt(entry.y, 10) : null,
+        singer: entry.s || null,
+      });
+    }
+    // Also search local tracks
+    const locals = getLocalTracks();
+    Object.keys(locals).forEach(key => {
+      const sep = key.indexOf('|');
+      if (sep < 0) return;
+      if (key.slice(0, sep) !== t) return;
+      const entry = locals[key];
+      results.push({
+        artist: key.slice(sep + 1),
+        type:   TYPE_LABELS[entry.t] || entry.t || null,
+        year:   entry.y ? parseInt(entry.y, 10) : null,
+        singer: entry.s || null,
+        local:  true,
+      });
+    });
+    results.sort((a, b) => (a.year || 9999) - (b.year || 9999));
+    return results;
+  }
+
   // ── Preload ───────────────────────────────────────────────────────────────
 
   function preload() { _load(); }
 
   return {
-    lookup, lookupSync,
+    lookup, lookupSync, searchByTitle,
     setOverride, getOverride,
     addLocalTrack, removeLocalTrack, getLocalTracks,
     preload,

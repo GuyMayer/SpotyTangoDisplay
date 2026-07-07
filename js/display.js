@@ -69,10 +69,36 @@ const Display = (() => {
   const LIVE_INTERVAL_MS = 30000;
   let _orchestras = {};        // loaded from data/orchestras.json
   let _lessonTrackKey = '';    // stale-guard for async song story fetch
+  let _currentLyrics = null;   // current track lyrics {text, synced?, source}
+  let _karaokeInterval = null; // interval for updating karaoke highlight
+  let _playbackPosition = 0;   // current playback position in ms
 
   function _getOrchestraBio(name) {
-    if (!name) return null;
-    return _orchestras[name.toLowerCase().trim()] || null;
+    if (!name || !_orchestras) return null;
+    
+    // Normalize: lowercase, trim, remove accents
+    let key = name.toLowerCase().trim();
+    key = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    
+    // Try exact match first
+    if (_orchestras[key]) return _orchestras[key];
+    
+    // Strip common orchestra suffixes and try again
+    const patterns = [
+      / y su orquesta tipica$/,
+      / y su orquesta tpica$/,  // without accent
+      / and his orchestra$/,
+      / y su orquesta$/,
+      / orquesta$/,
+      /'s orchestra$/,
+    ];
+    
+    for (const pattern of patterns) {
+      const stripped = key.replace(pattern, '').trim();
+      if (_orchestras[stripped]) return _orchestras[stripped];
+    }
+    
+    return null;
   }
 
   // Live tanda tracking
@@ -605,17 +631,31 @@ const Display = (() => {
     const orch = data.orchestraBio || {};
     els.lessonOrchName.textContent    = orch.name    || data.artist || '';
     els.lessonOrchNick.textContent    = orch.nickname || '';
-    els.lessonOrchEra.textContent     = orch.era      || '';
-    els.lessonOrchStyle.textContent   = orch.style    || '';
-    els.lessonOrchChars.innerHTML = '';
-    (orch.characteristics || []).forEach(c => {
-      const li = document.createElement('li');
-      li.textContent = c;
-      els.lessonOrchChars.appendChild(li);
-    });
-    const singers = orch.notable_singers;
-    els.lessonOrchSingers.textContent = singers && singers.length
-      ? 'Singers: ' + singers.join(', ') : '';
+
+    // Detect Wikipedia-sourced bio: single characteristics entry that is prose
+    const chars = orch.characteristics || [];
+    const isWikiBio = chars.length === 1 && chars[0].length > 80;
+
+    if (isWikiBio) {
+      // Show Wikipedia extract as a paragraph; suppress era/style/singers (may be empty)
+      els.lessonOrchEra.textContent   = '';
+      els.lessonOrchStyle.textContent = '';
+      els.lessonOrchChars.innerHTML   = '<p style="font-size:12px;color:#999;line-height:1.6;margin:6px 0 0">' +
+        chars[0].replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p>';
+      els.lessonOrchSingers.textContent = '';
+    } else {
+      els.lessonOrchEra.textContent   = orch.era   || '';
+      els.lessonOrchStyle.textContent = orch.style || '';
+      els.lessonOrchChars.innerHTML = '';
+      chars.forEach(c => {
+        const li = document.createElement('li');
+        li.textContent = c;
+        els.lessonOrchChars.appendChild(li);
+      });
+      const singers = orch.notable_singers;
+      els.lessonOrchSingers.textContent = singers && singers.length
+        ? 'Singers: ' + singers.join(', ') : '';
+    }
 
     const rightPanel = document.getElementById('lesson-right');
 
@@ -624,34 +664,241 @@ const Display = (() => {
       if (rightPanel && text) requestAnimationFrame(() => _fitTextToPanel(els.lessonStory, rightPanel, 16, 9));
     }
 
-    // Song story (right panel) — use pushed story if available, else async fallback
+    function _applyLyrics(lyrics) {
+      if (!lyrics) {
+        els.lessonStory.innerHTML = '';
+        els.lessonThemes.textContent = '';
+        _currentLyrics = null;
+        return;
+      }
+
+      _currentLyrics = lyrics;
+      
+      // If synced lyrics available, show karaoke style
+      if (lyrics.synced && lyrics.synced.length > 0) {
+        els.lessonStory.innerHTML = lyrics.synced.map((line, idx) => 
+          `<div class="lyric-line" data-time="${line.time}" data-idx="${idx}">${line.text || '&nbsp;'}</div>`
+        ).join('');
+        els.lessonThemes.textContent = 'Source: ' + lyrics.source;
+        _startKaraokeSync(data.position || 0);
+      } 
+      // Tango lyrics with translations
+      else if (lyrics.es || lyrics.en) {
+        const text = lyrics.en || lyrics.es || '';
+        els.lessonStory.textContent = text;
+        els.lessonThemes.textContent = 'Lyrics' + (lyrics.en && lyrics.es ? ' (Translated)' : '');
+        if (rightPanel && text) requestAnimationFrame(() => _fitTextToPanel(els.lessonStory, rightPanel, 14, 9));
+      }
+      // Plain text lyrics
+      else if (lyrics.text) {
+        els.lessonStory.textContent = lyrics.text;
+        els.lessonThemes.textContent = 'Lyrics: ' + lyrics.source;
+        if (rightPanel && lyrics.text) requestAnimationFrame(() => _fitTextToPanel(els.lessonStory, rightPanel, 14, 9));
+      }
+    }
+
+    // Song story / lyrics (right panel)
+    // Priority depends on song type:
+    // - Tango songs: story first (Wikipedia/Last.fm) → lyrics fallback
+    // - Non-tango songs: lyrics first → story fallback
     if (data.songStory) {
       _applyStory(data.songStory);
       els.lessonThemes.textContent = '';
+      _stopKaraokeSync();
     } else if (data.title) {
       els.lessonStory.textContent = 'Loading…';
       els.lessonThemes.textContent = '';
       const trackKey = (data.title + '|' + (data.artist || '')).toLowerCase();
       _lessonTrackKey = trackKey;
-      if (typeof LastFm !== 'undefined') {
-        LastFm.fetchTrackInfo(data.title, data.artist).then(info => {
-          if (_lessonTrackKey !== trackKey) return; // stale
-          if (info && info.story) {
-            _applyStory(info.story);
-            els.lessonThemes.textContent = info.source === 'wikipedia' ? 'Source: Wikipedia' : 'Source: Last.fm';
-          } else {
-            _applyStory('');
-            els.lessonThemes.textContent = '';
-          }
-        }).catch(() => { if (_lessonTrackKey === trackKey) _applyStory(''); });
+      
+      // Check if it's a tango song
+      const isTango = typeof TangoDB !== 'undefined' && TangoDB.lookupSync(data.title, data.artist).type !== null;
+      
+      if (isTango) {
+        // Tango: try story first, lyrics fallback
+        if (typeof LastFm !== 'undefined') {
+          LastFm.fetchTrackInfo(data.title, data.artist).then(info => {
+            if (_lessonTrackKey !== trackKey) return; // stale
+            if (info && info.story) {
+              _applyStory(info.story);
+              els.lessonThemes.textContent = info.source === 'wikipedia' ? 'Source: Wikipedia' : 'Source: Last.fm';
+              _stopKaraokeSync();
+            } else {
+              // No story, try lyrics then provenance
+              _tryFetchLyrics(data.title, data.artist, trackKey, data, () => _showFallbackContent(data, trackKey));
+            }
+          }).catch(() => { 
+            if (_lessonTrackKey === trackKey) _tryFetchLyrics(data.title, data.artist, trackKey, data, () => _showFallbackContent(data, trackKey));
+          });
+        } else {
+          _tryFetchLyrics(data.title, data.artist, trackKey, data, () => _showFallbackContent(data, trackKey));
+        }
       } else {
-        _applyStory(data.songStory || '');
-        const themes = data.songThemes;
-        els.lessonThemes.textContent = themes && themes.length ? 'Themes: ' + themes.join(', ') : '';
+        // Non-tango: try lyrics first, story fallback
+        _tryFetchLyrics(data.title, data.artist, trackKey, data, () => {
+          // Lyrics not found, try story
+          if (_lessonTrackKey !== trackKey) return;
+          if (typeof LastFm !== 'undefined') {
+            LastFm.fetchTrackInfo(data.title, data.artist).then(info => {
+              if (_lessonTrackKey !== trackKey) return;
+              if (info && info.story) {
+                _applyStory(info.story);
+                els.lessonThemes.textContent = info.source === 'wikipedia' ? 'Source: Wikipedia' : 'Source: Last.fm';
+                _stopKaraokeSync();
+              } else {
+                _showFallbackContent(data, trackKey);
+              }
+            }).catch(() => {
+              if (_lessonTrackKey === trackKey) _showFallbackContent(data, trackKey);
+            });
+          } else {
+            _showFallbackContent(data, trackKey);
+          }
+        });
       }
     } else {
       _applyStory('');
       els.lessonThemes.textContent = '';
+      _stopKaraokeSync();
+    }
+  }
+
+  function _tryFetchLyrics(title, artist, trackKey, data, onNotFound) {
+    if (typeof LyricsModule === 'undefined') {
+      if (onNotFound) onNotFound();
+      else _showFallbackContent(data, trackKey);
+      return;
+    }
+
+    LyricsModule.getLyrics(title, artist).then(lyrics => {
+      if (_lessonTrackKey !== trackKey) return; // stale
+      if (lyrics) {
+        _applyLyrics(lyrics);
+      } else {
+        if (onNotFound) onNotFound();
+        else _showFallbackContent(data, trackKey);
+      }
+    }).catch(() => {
+      if (_lessonTrackKey === trackKey) {
+        if (onNotFound) onNotFound();
+        else _showFallbackContent(data, trackKey);
+      }
+    });
+  }
+
+  // Last resort: show song provenance (classic song covered by modern orch)
+  // or a brief metadata card (year / type / singer from TangoDB or payload).
+  function _showFallbackContent(data, trackKey) {
+    if (_lessonTrackKey !== trackKey) return; // stale
+
+    // Try song provenance — search TangoDB for all recordings of this title
+    if (data.title && typeof TangoDB !== 'undefined') {
+      const recordings = TangoDB.searchByTitle(data.title);
+      if (recordings.length > 0) {
+        const earliest = recordings[0]; // already sorted ascending by year
+        // Build "also by" list — top 3 different orchestras (not the current one)
+        const currentNorm = (data.artist || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+        const others = recordings
+          .filter(r => r.artist !== earliest.artist && r.artist !== currentNorm)
+          .slice(0, 3)
+          .map(r => {
+            // Capitalise first letter of each word
+            return r.artist.replace(/\b\w/g, c => c.toUpperCase());
+          });
+
+        const type = (earliest.type || 'Tango');
+        let lines = [];
+        lines.push('🎻 ' + type + ' · ' + recordings.length + ' known recordings');
+        if (earliest.year) {
+          const name = earliest.artist.replace(/\b\w/g, c => c.toUpperCase());
+          lines.push('Earliest: ' + name + ' (' + earliest.year + ')');
+        }
+        if (others.length > 0) {
+          lines.push('Also: ' + others.join(', '));
+        }
+        if (earliest.singer) {
+          lines.push('Singer: ' + earliest.singer);
+        }
+
+        els.lessonStory.textContent = lines.join('\n');
+        els.lessonThemes.textContent = 'Song Provenance';
+        return;
+      }
+    }
+
+    // Final fallback: metadata card from payload (year/genre from Spotify)
+    const year   = data.year || '';
+    const genre  = data.genre || '';
+    const singer = data.singer || '';
+    const parts  = [];
+    if (year)   parts.push('📅 ' + year);
+    if (genre)  parts.push('🎵 ' + genre);
+    if (singer) parts.push('🎤 ' + singer);
+
+    if (parts.length > 0) {
+      els.lessonStory.textContent = parts.join('  ·  ');
+      els.lessonThemes.textContent = '';
+    } else {
+      els.lessonStory.textContent = '';
+      els.lessonThemes.textContent = '';
+    }
+  }
+
+  function _startKaraokeSync(startPosition) {
+    _stopKaraokeSync();
+    _playbackPosition = startPosition || 0;
+    
+    // Update every 100ms
+    _karaokeInterval = setInterval(() => {
+      _playbackPosition += 100;
+      _updateKaraokeHighlight();
+    }, 100);
+    
+    _updateKaraokeHighlight();
+  }
+
+  function _stopKaraokeSync() {
+    if (_karaokeInterval) {
+      clearInterval(_karaokeInterval);
+      _karaokeInterval = null;
+    }
+    _currentLyrics = null;
+  }
+
+  function _updateKaraokeHighlight() {
+    if (!_currentLyrics || !_currentLyrics.synced) return;
+
+    const lines = document.querySelectorAll('.lyric-line');
+    if (!lines.length) return;
+
+    // Find current line based on playback position
+    let currentIdx = -1;
+    for (let i = _currentLyrics.synced.length - 1; i >= 0; i--) {
+      if (_playbackPosition >= _currentLyrics.synced[i].time) {
+        currentIdx = i;
+        break;
+      }
+    }
+
+    // Update highlighting
+    lines.forEach((line, idx) => {
+      if (idx === currentIdx) {
+        line.classList.add('current');
+      } else {
+        line.classList.remove('current');
+      }
+    });
+
+    // Auto-scroll to keep current line visible
+    if (currentIdx >= 0 && lines[currentIdx]) {
+      const rightPanel = document.getElementById('lesson-right');
+      if (rightPanel) {
+        const lineTop = lines[currentIdx].offsetTop;
+        const lineHeight = lines[currentIdx].offsetHeight;
+        const panelHeight = rightPanel.offsetHeight;
+        const scrollTop = lineTop - (panelHeight / 2) + (lineHeight / 2);
+        rightPanel.scrollTop = Math.max(0, scrollTop);
+      }
     }
   }
 

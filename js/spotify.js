@@ -259,6 +259,31 @@ const Spotify = (() => {
     }
   }
 
+  // Fetch up to maxTracks tracks from a playlist (paginates in pages of 50)
+  async function getPlaylistTracks(playlistId, maxTracks) {
+    if (!playlistId) return [];
+    const limit = 50;
+    const total = maxTracks || 100;
+    let all = [];
+    let offset = 0;
+    while (all.length < total) {
+      const page = await _apiFetch(
+        '/playlists/' + encodeURIComponent(playlistId) +
+        '/tracks?limit=' + limit + '&offset=' + offset +
+        '&fields=items(track(name,artists(name),album(release_date))),next'
+      );
+      if (!page || !page.items) break;
+      for (const item of page.items) {
+        if (!item || !item.track) continue;
+        all.push(item.track);
+        if (all.length >= total) break;
+      }
+      if (!page.next) break;
+      offset += limit;
+    }
+    return all;
+  }
+
   // ── Public API ────────────────────────────────────────────────────────────
 
   return {
@@ -271,6 +296,7 @@ const Spotify = (() => {
     getCurrentlyPlaying,
     getQueue,
     getArtistGenres,
+    getPlaylistTracks,
     skipToNext,
   };
 })();
