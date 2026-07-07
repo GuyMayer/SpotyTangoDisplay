@@ -105,22 +105,21 @@ const LyricsModule = (() => {
       console.warn('[Lyrics] LRCLIB error:', err);
     }
 
-    // 2. Fallback: lyrics.ovh (free, no key required, plain text only)
+    // 2. Fallback: try plain LRCLIB search endpoint (broader match)
     try {
-      const url = `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`;
+      const url = `https://lrclib.net/api/search?artist_name=${encodeURIComponent(artist)}&track_name=${encodeURIComponent(title)}`;
       const res = await fetch(url);
       if (res.ok) {
-        const data = await res.json();
-        if (data.lyrics) {
-          console.log('[Lyrics] Found on lyrics.ovh');
-          return {
-            text: data.lyrics,
-            source: 'lyrics.ovh'
-          };
+        const results = await res.json();
+        const hit = results && results[0];
+        if (hit && (hit.syncedLyrics || hit.plainLyrics)) {
+          const result = { text: hit.plainLyrics || hit.syncedLyrics, source: 'LRCLIB' };
+          if (hit.syncedLyrics) result.synced = _parseLRC(hit.syncedLyrics);
+          return result;
         }
       }
     } catch (err) {
-      console.warn('[Lyrics] lyrics.ovh error:', err);
+      console.warn('[Lyrics] LRCLIB search error:', err);
     }
 
     return null;

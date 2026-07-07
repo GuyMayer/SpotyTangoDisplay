@@ -70,23 +70,20 @@ const LastFm = (() => {
   }
 
   async function _tryWikipedia(title) {
-    const variants = [title, title + '_(tango)', title + '_(song)'];
-    for (const v of variants) {
-      try {
-        const r = await fetch(
-          'https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(v)
-        );
-        if (!r.ok) continue;
-        const d = await r.json();
-        if (d.type === 'disambiguation' || !d.extract) continue;
-        return {
-          story:  d.extract,
-          source: 'wikipedia',
-          url:    d.content_urls && d.content_urls.desktop && d.content_urls.desktop.page,
-        };
-      } catch (_) { /* try next */ }
-    }
-    return null;
+    // Single request only - most tango songs won't have a Wikipedia article.
+    try {
+      const r = await fetch(
+        'https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(title)
+      );
+      if (!r.ok) return null;
+      const d = await r.json();
+      if (d.type === 'disambiguation' || !d.extract) return null;
+      return {
+        story:  d.extract,
+        source: 'wikipedia',
+        url:    d.content_urls && d.content_urls.desktop && d.content_urls.desktop.page,
+      };
+    } catch (_) { return null; }
   }
 
   /**
