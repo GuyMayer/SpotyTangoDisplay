@@ -194,19 +194,19 @@ const LyricsModule = (() => {
     if (!apiKey) return null;
 
     const prompt = `You are an Argentine tango poet and literary translator.
-Translate the tango lyric below from Spanish to English using the "imitation" approach — not word-for-word, not paraphrase, but a free recreation that preserves the spirit, emotional texture, and poetic music of the original.
+Translate the tango lyric below from Spanish to English as a poem to be read — not sung, not subtitled, but experienced as English poetry.
 
-Your reader is an English speaker at a Buenos Aires milonga. They cannot understand Spanish. They want to feel what this song is about — the longing, the loss, the passion, the bittersweet nostalgia. Make them feel it.
+Your reader is at a milonga, watching the dancers. They see this translation on a screen and want to feel what the song is about — the longing, the loss, the passion, the bittersweet nostalgia — the way a beautiful English poem moves you.
 
 Guidelines:
-- RHYTHM: Preserve the syllabic stress pattern of each line where possible — this is sung, so the words must fit the musical phrase
-- RHYME: The original likely rhymes. Do not abandon this. Use slant rhyme or assonance (matching vowel sounds: "rain/pain", "night/white", "alone/bone") where exact rhyme would force awkward phrasing. Exact rhyme is welcome where it falls naturally. Never sacrifice emotional truth just to rhyme.
-- REGISTER: Match the emotional register line by line — tender, bitter, resigned, passionate — as in the original
-- METAPHOR: Lunfardo slang and metaphors that don't translate should become vivid idiomatic English equivalents with the same emotional weight ("hauls her desire" not "drags desire")
-- STRUCTURE: Same number of lines per stanza, blank lines between stanzas
-- POLISH: After completing the translation, read it aloud in your mind. Revise any line that sounds awkward, un-musical, or forced
+- Write for the eye and the heart. Let lines breathe. Use enjambment where it deepens the feeling.
+- RHYME: If the original rhymes, echo it through natural slant rhyme or assonance ("dream/grief", "night/white", "gone/alone"). Never force a rhyme that weakens a line. An unrhymed line with weight beats a rhymed line that jangles.
+- REGISTER: Match the emotional register of each stanza — tender, bitter, resigned, passionate — exactly as the original shifts.
+- METAPHOR: Lunfardo slang and Buenos Aires idioms must become vivid English equivalents with the same emotional weight, not literal translations. ("ponzoña" = venom/poison — carry the feeling, not the dictionary word)
+- STRUCTURE: Preserve stanza breaks (blank lines between stanzas). Line count may flex slightly if it improves the poetry.
+- SELF-REVISION: Before responding, read the poem once as if you've never seen it. Does every line earn its place? Is any line stiff, clichéd, or flat? If so, revise it.
 
-Reply with ONLY the final English translation. No explanations, no notes, no Spanish.
+Reply with ONLY the final English poem. No explanations, no title, no Spanish.
 
 Spanish original:
 ${spanishText.trim()}`;
@@ -220,7 +220,7 @@ ${spanishText.trim()}`;
           'HTTP-Referer': 'http://127.0.0.1:3456/',
         },
         body: JSON.stringify({
-          models: ['anthropic/claude-sonnet-4.5', 'anthropic/claude-sonnet-4'],
+          models: ['anthropic/claude-sonnet-4.6', 'anthropic/claude-sonnet-4.5'],
           route: 'fallback',
           max_tokens: 800,
           temperature: 0.7,
