@@ -168,14 +168,29 @@ const LyricsModule = (() => {
   }
 
   /**
-   * Detect if text is likely Spanish tango lyrics.
+   * Detect if text is likely non-English (Spanish, French, Italian, Portuguese etc.)
+   * and therefore a translation candidate.
    */
   function _looksSpanish(text) {
     if (!text || text.length < 30) return false;
     const sample = text.substring(0, 600).toLowerCase();
-    const markers = [' que ', ' mi ', ' amor', ' un ', ' con ', ' como ', ' tu ', ' de ', ' para ', ' no ', ' es ', ' en ', ' yo ', ' una '];
-    const hits = markers.filter(w => sample.includes(w));
-    return hits.length >= 4;
+    // Spanish markers
+    const es = [' que ', ' mi ', ' amor', ' un ', ' con ', ' como ', ' tu ', ' de ', ' no ', ' es ', ' en ', ' yo '];
+    // French markers
+    const fr = [' que ', ' mon ', ' ma ', ' je ', ' tu ', ' il ', ' ne ', ' pas ', ' les ', ' est ', ' sur ', ' dans '];
+    // Italian markers
+    const it = [' che ', ' mi ', ' ti ', ' non ', ' per ', ' una ', ' gli ', ' del ', ' sei '];
+    // Portuguese markers
+    const pt = [' que ', ' não ', ' uma ', ' com ', ' seu ', ' por ', ' para ', ' mas '];
+    const esHits = es.filter(w => sample.includes(w)).length;
+    const frHits = fr.filter(w => sample.includes(w)).length;
+    const itHits = it.filter(w => sample.includes(w)).length;
+    const ptHits = pt.filter(w => sample.includes(w)).length;
+    // Quick check: if looks like pure English, skip
+    const enMarkers = [' the ', ' and ', ' you ', ' your ', ' that ', ' with ', ' this ', ' for ', ' have ', ' not '];
+    const enHits = enMarkers.filter(w => sample.includes(w)).length;
+    if (enHits >= 5) return false; // likely English already
+    return (esHits >= 3 || frHits >= 4 || itHits >= 3 || ptHits >= 3);
   }
 
   /**
@@ -193,22 +208,22 @@ const LyricsModule = (() => {
     const apiKey = localStorage.getItem('spotd_openrouter_key');
     if (!apiKey) return null;
 
-    const prompt = `You are an Argentine tango poet and literary translator.
-Translate the tango lyric below from Spanish to English as a poem to be read — not sung, not subtitled, but experienced as English poetry.
+    const prompt = `You are a poet and literary translator.
+Translate the song lyric below into English as a poem to be read — not sung, not subtitled, but experienced as English poetry.
 
-Your reader is at a milonga, watching the dancers. They see this translation on a screen and want to feel what the song is about — the longing, the loss, the passion, the bittersweet nostalgia — the way a beautiful English poem moves you.
+Your reader is watching dancers at a milonga or music event. They see this translation on a screen and want to feel what the song is about — the way a beautiful English poem moves you.
 
 Guidelines:
 - Write for the eye and the heart. Let lines breathe. Use enjambment where it deepens the feeling.
-- RHYME: If the original rhymes, echo it through natural slant rhyme or assonance ("dream/grief", "night/white", "gone/alone"). Never force a rhyme that weakens a line. An unrhymed line with weight beats a rhymed line that jangles.
-- REGISTER: Match the emotional register of each stanza — tender, bitter, resigned, passionate — exactly as the original shifts.
-- METAPHOR: Lunfardo slang and Buenos Aires idioms must become vivid English equivalents with the same emotional weight, not literal translations. ("ponzoña" = venom/poison — carry the feeling, not the dictionary word)
-- STRUCTURE: Preserve stanza breaks (blank lines between stanzas). Line count may flex slightly if it improves the poetry.
-- SELF-REVISION: Before responding, read the poem once as if you've never seen it. Does every line earn its place? Is any line stiff, clichéd, or flat? If so, revise it.
+- RHYME: If the original rhymes, echo it through natural slant rhyme or assonance. Never force a rhyme that weakens a line.
+- REGISTER: Match the emotional register of each stanza exactly as the original shifts — tender, bitter, resigned, passionate.
+- METAPHOR: Idioms and culturally specific language must become vivid English equivalents with the same emotional weight, not literal translations.
+- STRUCTURE: Preserve stanza breaks. Line count may flex slightly if it improves the poetry.
+- SELF-REVISION: Before responding, read the poem once as if you've never seen it. Revise any flat, stiff, or clichéd line.
 
-Reply with ONLY the final English poem. No explanations, no title, no Spanish.
+Reply with ONLY the final English poem. No explanations, no title, no original language text.
 
-Spanish original:
+Original:
 ${spanishText.trim()}`;
 
     try {
