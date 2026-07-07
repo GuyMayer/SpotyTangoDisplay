@@ -4,7 +4,7 @@ const Control = (() => {
 
   let _mode = 'milonga';         // 'milonga' | 'lesson'
   let _format = 'tandas-cortinas'; // 'tandas-cortinas' | 'tandas-nocortinas' | 'single'
-  let _lyricsLang = 'es';         // 'es' | 'en' — DJ controls lyrics language on display
+  let _lyricsLang = 'system';     // 'system' | target language code — DJ controls lyrics translation target
   let _lastTrack = null;
   let _currentTrackId = null;    // track ID for per-track DB overrides
   let _currentDetectedType = ''; // auto-detected type for current track
@@ -76,6 +76,32 @@ const Control = (() => {
     }
     
     return null;
+  }
+
+  function _normArtistForCompare(name) {
+    if (!name) return '';
+    return name.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+(y su|and his|orquesta tipica|orquesta|orchestra|sexteto|quartet|quintet).*$/i, '')
+      .replace(/[^a-z0-9 ]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function _getCoverInfo(title, artistName) {
+    if (!title || !artistName || typeof TangoDB === 'undefined') return '';
+    const recordings = TangoDB.searchByTitle(title);
+    if (!recordings || recordings.length === 0) return '';
+
+    const current = _normArtistForCompare(artistName);
+    const earliest = recordings[0];
+    const original = _normArtistForCompare(earliest.artist);
+
+    if (!current || !original || current === original) return '';
+
+    const originalLabel = earliest.artist.replace(/\b\w/g, c => c.toUpperCase());
+    const yearLabel = earliest.year ? ' (' + earliest.year + ')' : '';
+    return 'Original: ' + originalLabel + yearLabel;
   }
 
   // ── Local setup nudge for GitHub Pages visitors ──────────────────────────
@@ -379,16 +405,25 @@ const Control = (() => {
   }
 
   function _bindLyricsLangToggle() {
-    _lyricsLang = localStorage.getItem('spotd_lyrics_lang') || 'es';
-    document.querySelectorAll('.lang-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.lang === _lyricsLang);
-      btn.addEventListener('click', () => {
-        _lyricsLang = btn.dataset.lang;
+    const sel = document.getElementById('lyrics-target-select');
+    _lyricsLang = localStorage.getItem('spotd_lyrics_lang') || 'system';
+    if (sel) {
+      sel.value = _lyricsLang;
+      sel.addEventListener('change', () => {
+        _lyricsLang = sel.value || 'system';
         localStorage.setItem('spotd_lyrics_lang', _lyricsLang);
-        document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === _lyricsLang));
-        _pushCurrentState(); // re-send with new lang
+        _pushCurrentState(); // re-send with new target language
       });
-    });
+    }
+  }
+
+  function _resolveLyricsTargetLang() {
+    if (_lyricsLang && _lyricsLang !== 'system') return _lyricsLang;
+
+    const raw = ((navigator.language || navigator.userLanguage || 'en') + '').toLowerCase();
+    const base = raw.split('-')[0];
+    const supported = new Set(['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'el']);
+    return supported.has(base) ? base : 'en';
   }
 
   function _bindModeToggle() {
@@ -731,6 +766,7 @@ const Control = (() => {
       progressMs: data.raw && data.raw.progress_ms || 0,
       spotifyUrl: track.external_urls && track.external_urls.spotify || '',
       albumArt:  track.album && track.album.images && track.album.images[0] && track.album.images[0].url,
+      lang: _resolveLyricsTargetLang(),
       tandaPosition: tandaPos && tandaPos.position,
       tandaTotal:    tandaPos && tandaPos.total,
       tandaSequence,
@@ -739,9 +775,10 @@ const Control = (() => {
       nextArtist,
       nextGenre,
       nextLabel,
+      composerInfo: _getCoverInfo(track.name, artistName),
       orchestraBio: _getOrchestraBio(artistName),
       songStory: _storyCurrentText || undefined,
-      lang: _lyricsLang,
+      lang: _resolveLyricsTargetLang(),
       appearance: {
         lessonPanels: (Profiles.getActive().lessonPanels) || { showOrchestra: true, showStory: true },
       },
@@ -752,11 +789,7 @@ const Control = (() => {
     _maybeTranslateTitle(track.name, payload);
 
     // Async: fetch AI orchestra bio if not in local DB
-    if (!payload.orchestraBio) {
-      _maybeFetchOrchestraBio(artistName, payload);
-      // Show composer/original orchestra for modern cover versions
-      _maybeLookupComposer(track.name, artistName, payload);
-    }
+    if (!payload.orchestraBio) _maybeFetchOrchestraBio(artistName, payload);
   }
 
   async function _pushCurrentState() {
@@ -1342,11 +1375,19 @@ const Control = (() => {
   }
 
   async function _maybeTranslateTitle(title, basePayload) {
-    if (!title || !_looksSpanish(title)) return;
+    if (!title) return;
 
-    // Use cache to avoid repeated API calls for the same title
-    if (title in _translationCache) {
-      if (_translationCache[title]) _pushState(Object.assign({}, basePayload, { titleTranslation: _translationCache[title] }));
+    const targetLang = _resolveLyricsTargetLang();
+    const cacheKey = (title + '|' + targetLang).toLowerCase();
+
+    // English target: skip obviously-English titles to avoid pointless lookups.
+    if (targetLang === 'en' && !_looksSpanish(title)) return;
+
+    // Use cache to avoid repeated API calls for the same title and target language.
+    if (cacheKey in _translationCache) {
+      if (_translationCache[cacheKey]) {
+        _pushState(Object.assign({}, basePayload, { titleTranslation: _translationCache[cacheKey] }));
+      }
       return;
     }
 
@@ -1362,24 +1403,26 @@ const Control = (() => {
           'HTTP-Referer': window.location.origin + '/',
         },
         body: JSON.stringify({
-          models: ['openai/gpt-oss-20b:free', 'openai/gpt-oss-120b:free', 'meta-llama/llama-3.3-70b-instruct:free'],
+          models: ['anthropic/claude-sonnet-4.6', 'anthropic/claude-opus-4.8'],
           route: 'fallback',
-          max_tokens: 20,
+          max_tokens: 30,
           messages: [{
             role: 'user',
-            content: 'Translate this Argentine tango title to English. It may contain lunfardo slang or Rioplatense Spanish. Reply with the English translation only, no quotes, no explanation: ' + title,
+            content: 'Translate this song title into ' +
+              ({ en: 'English', es: 'Spanish', fr: 'French', de: 'German', it: 'Italian', pt: 'Portuguese', ru: 'Russian', el: 'Greek' }[targetLang] || 'English') +
+              '. Keep it short, natural, and suitable as a music title. If the title already works well in that language, keep it elegant rather than literal. Reply with the translation only, no quotes, no explanation: ' + title,
           }],
         }),
       });
-      if (!resp.ok) { _translationCache[title] = null; return; }
+      if (!resp.ok) { _translationCache[cacheKey] = null; return; }
       const data = await resp.json();
       const t = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
       const translation = t && t.trim();
-      _translationCache[title] = translation || null;
+      _translationCache[cacheKey] = translation || null;
       try { localStorage.setItem(TITLE_TRANSLATION_KEY, JSON.stringify(_translationCache)); } catch {}
       if (translation) _pushState(Object.assign({}, basePayload, { titleTranslation: translation }));
     } catch (e) {
-      _translationCache[title] = null;
+      _translationCache[cacheKey] = null;
     }
   }
 

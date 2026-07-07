@@ -205,7 +205,7 @@ const Display = (() => {
 
     // Track mode early so _applyBackground can choose the right background
     _currentMode = data.mode || 'milonga';
-    _displayLang = data.lang || 'es';
+    _displayLang = data.lang || 'system';
 
     // Apply profile from payload if provided (live profile switch)
     if (data.appearance) {
@@ -835,8 +835,20 @@ const Display = (() => {
     if (rightPanel && lyrics.en) requestAnimationFrame(() => _fitTextToPanel(els.lessonStory, rightPanel, 14, 9));
   }
 
+  function _renderLyricsTranslation(lyrics, targetLang) {
+    const rightPanel = document.getElementById('lesson-right');
+    const text = lyrics.translations && lyrics.translations[targetLang];
+    if (!text) return false;
+    _stopKaraokeSync();
+    els.lessonStory.textContent = text;
+    const LABELS = { en: 'English', es: 'Spanish', fr: 'French', de: 'German', it: 'Italian', pt: 'Portuguese', ru: 'Russian', el: 'Greek' };
+    els.lessonThemes.textContent = (LABELS[targetLang] || targetLang.toUpperCase()) + ' translation';
+    if (rightPanel && text) requestAnimationFrame(() => _fitTextToPanel(els.lessonStory, rightPanel, 14, 9));
+    return true;
+  }
+
   // Display language (controlled by DJ panel, syncs via payload.lang)
-  let _displayLang = 'es'; 
+  let _displayLang = 'system'; 
 
   function _applyLyrics(lyrics, position, title, artist, cacheKey) {
     if (!lyrics) {
@@ -848,26 +860,45 @@ const Display = (() => {
     const rightPanel = document.getElementById('lesson-right');
     _currentLyrics = lyrics;
 
-    // Show EN if DJ switched language and translation is available
-    if (_displayLang === 'en' && lyrics.en) {
-      _renderLyricsEn(lyrics);
+    // Render target translation if DJ selected one and we already have it.
+    if (_displayLang !== 'system') {
+      if (_displayLang === 'en' && lyrics.en) {
+        _renderLyricsEn(lyrics);
+      } else if (_renderLyricsTranslation(lyrics, _displayLang)) {
+        // rendered translated target language
+      } else {
+        _renderLyricsEs(lyrics, position, rightPanel);
+      }
     } else {
       _renderLyricsEs(lyrics, position, rightPanel);
     }
 
-    // Background translation: detect non-English, fire-and-forget
-    if (!lyrics.en && typeof LyricsModule !== 'undefined' && cacheKey) {
+    // Background translation: for System, do nothing. For English, translate only when original is non-English.
+    // For other target languages, translate regardless of source language.
+    if (typeof LyricsModule !== 'undefined' && cacheKey && _displayLang !== 'system') {
       const textToTranslate = lyrics.text ||
         (lyrics.synced ? lyrics.synced.map(l => l.text).filter(Boolean).join('\n') : '') ||
         lyrics.es || '';
-      if (textToTranslate && LyricsModule.looksSpanish(textToTranslate)) {
+      const needsEnglishTranslation = (_displayLang === 'en')
+        ? LyricsModule.needsTranslation(textToTranslate)
+        : true;
+      const hasTarget = (_displayLang === 'en')
+        ? !!lyrics.en
+        : !!(lyrics.translations && lyrics.translations[_displayLang]);
+      if (textToTranslate && needsEnglishTranslation && !hasTarget) {
         const snapshot = _lessonTrackKey;
-        LyricsModule.translateLyrics(title || '', artist || '', textToTranslate, cacheKey)
-          .then(en => {
-            if (!en || _lessonTrackKey !== snapshot) return;
-            lyrics.en = en;
-            // If DJ already switched to EN, re-render with new translation
-            if (_displayLang === 'en') _renderLyricsEn(lyrics);
+        const targetLang = _displayLang;
+        LyricsModule.translateLyrics(title || '', artist || '', textToTranslate, cacheKey, targetLang)
+          .then(translated => {
+            if (!translated || _lessonTrackKey !== snapshot) return;
+            if (targetLang === 'en') {
+              lyrics.en = translated;
+              if (_displayLang === 'en') _renderLyricsEn(lyrics);
+            } else {
+              lyrics.translations = lyrics.translations || {};
+              lyrics.translations[targetLang] = translated;
+              if (_displayLang === targetLang) _renderLyricsTranslation(lyrics, targetLang);
+            }
           });
       }
     }

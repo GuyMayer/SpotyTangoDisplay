@@ -87,8 +87,12 @@ const LyricsModule = (() => {
         const data = await res.json();
         if (data.syncedLyrics || data.plainLyrics) {
           console.log('[Lyrics] Found on LRCLIB:', data.syncedLyrics ? 'synced' : 'plain');
-          // Normalise line endings and trim surrounding whitespace
-          const plainText = (data.plainLyrics || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+          // Normalise line endings, collapse repeated blank lines, and trim.
+          const plainText = (data.plainLyrics || '')
+            .replace(/\r\n/g, '\n')
+            .replace(/\r/g, '\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
           const result = {
             text: plainText,
             source: 'LRCLIB'
@@ -116,7 +120,11 @@ const LyricsModule = (() => {
         const hit = Array.isArray(hits) && hits[0];
         if (hit && (hit.syncedLyrics || hit.plainLyrics)) {
           console.log('[Lyrics] Found on LRCLIB (search)');
-          const plainText = (hit.plainLyrics || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+          const plainText = (hit.plainLyrics || '')
+            .replace(/\r\n/g, '\n')
+            .replace(/\r/g, '\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
           const result = { text: plainText, source: 'LRCLIB' };
           if (hit.syncedLyrics) result.synced = _parseLRC(hit.syncedLyrics);
           return result;
@@ -173,60 +181,86 @@ const LyricsModule = (() => {
    * Detect if text is likely non-English (Spanish, French, Italian, Portuguese etc.)
    * and therefore a translation candidate.
    */
-  function _looksSpanish(text) {
+  function _needsTranslation(text) {
     if (!text || text.length < 30) return false;
     const sample = text.substring(0, 600).toLowerCase();
-    // Spanish markers
-    const es = [' que ', ' mi ', ' amor', ' un ', ' con ', ' como ', ' tu ', ' de ', ' no ', ' es ', ' en ', ' yo '];
-    // French markers
-    const fr = [' que ', ' mon ', ' ma ', ' je ', ' tu ', ' il ', ' ne ', ' pas ', ' les ', ' est ', ' sur ', ' dans '];
-    // Italian markers
-    const it = [' che ', ' mi ', ' ti ', ' non ', ' per ', ' una ', ' gli ', ' del ', ' sei '];
-    // Portuguese markers
-    const pt = [' que ', ' não ', ' uma ', ' com ', ' seu ', ' por ', ' para ', ' mas '];
-    const esHits = es.filter(w => sample.includes(w)).length;
-    const frHits = fr.filter(w => sample.includes(w)).length;
-    const itHits = it.filter(w => sample.includes(w)).length;
-    const ptHits = pt.filter(w => sample.includes(w)).length;
-    // Quick check: if looks like pure English, skip
+
+    // Any clearly non-Latin script should be translated.
+    if (/[\u0370-\u03FF\u1F00-\u1FFF\u0400-\u04FF\u0590-\u05FF\u0600-\u06FF]/.test(sample)) {
+      return true;
+    }
+
+    // Strong English signal: common stopwords and contractions.
     const enMarkers = [' the ', ' and ', ' you ', ' your ', ' that ', ' with ', ' this ', ' for ', ' have ', ' not '];
     const enHits = enMarkers.filter(w => sample.includes(w)).length;
-    if (enHits >= 5) return false; // likely English already
-    return (esHits >= 3 || frHits >= 4 || itHits >= 3 || ptHits >= 3);
+    if (enHits >= 5) return false;
+
+    // If the text contains many accented Latin characters, it is unlikely to be English.
+    const accentedHits = (sample.match(/[à-öø-ÿ]/g) || []).length;
+    if (accentedHits >= 3) return true;
+
+    // Romance / non-English hints. This is intentionally broad rather than language-specific.
+    const nonEnglishMarkers = [
+      ' que ', ' mi ', ' amor', ' un ', ' con ', ' como ', ' tu ', ' de ', ' no ', ' es ', ' en ', ' yo ',
+      ' mon ', ' ma ', ' je ', ' il ', ' ne ', ' pas ', ' les ', ' est ', ' sur ', ' dans ',
+      ' che ', ' ti ', ' non ', ' per ', ' una ', ' gli ', ' del ', ' sei ',
+      ' não ', ' seu ', ' para ', ' mas ', ' meu ', ' ela ',
+      ' και ', ' σου ', ' μου '
+    ];
+    const nonEnglishHits = nonEnglishMarkers.filter(w => sample.includes(w)).length;
+
+    // Default to translating when the text does not look confidently English.
+    return nonEnglishHits >= 2 || enHits <= 1;
   }
 
   /**
-   * Translate Spanish lyrics to poetic English using Claude Sonnet via OpenRouter.
-   * Caches the result permanently in the lyrics cache.
-   * @returns {Promise<string|null>} English translation, or null if unavailable.
+   * Translate lyrics into the selected target language as poetry for reading.
+   * Caches the result permanently in the lyrics cache, keyed by target language.
+   * @returns {Promise<string|null>} translated poem, or null if unavailable.
    */
-  async function translateLyrics(title, artist, spanishText, cacheKey) {
-    if (!spanishText || !spanishText.trim()) return null;
+  async function translateLyrics(title, artist, sourceText, cacheKey, targetLang) {
+    if (!sourceText || !sourceText.trim()) return null;
+    targetLang = targetLang || 'en';
 
     // Return cached translation immediately if available
     const existing = _getCached(cacheKey);
-    if (existing && existing.en) return existing.en;
+    if (existing) {
+      if (targetLang === 'en' && existing.en) return existing.en;
+      if (existing.translations && existing.translations[targetLang]) return existing.translations[targetLang];
+    }
 
     const apiKey = localStorage.getItem('spotd_openrouter_key');
     if (!apiKey) return null;
 
-    const prompt = `You are a poet and literary translator.
-Translate the song lyric below into English as a poem to be read — not sung, not subtitled, but experienced as English poetry.
+    const TARGET_LABELS = {
+      en: 'English',
+      es: 'Spanish',
+      fr: 'French',
+      de: 'German',
+      it: 'Italian',
+      pt: 'Portuguese',
+      ru: 'Russian',
+      el: 'Greek'
+    };
+    const targetLabel = TARGET_LABELS[targetLang] || 'English';
 
-Your reader is watching dancers at a milonga or music event. They see this translation on a screen and want to feel what the song is about — the way a beautiful English poem moves you.
+    const prompt = `You are a poet and literary translator.
+Translate the song lyric below into ${targetLabel} as a poem to be read — not sung, not subtitled, but experienced as ${targetLabel} poetry.
+
+Your reader is watching dancers at a milonga or music event. They see this translation on a screen and want to feel what the song is about — the way a beautiful ${targetLabel} poem moves you.
 
 Guidelines:
 - Write for the eye and the heart. Let lines breathe. Use enjambment where it deepens the feeling.
 - RHYME: If the original rhymes, echo it through natural slant rhyme or assonance. Never force a rhyme that weakens a line.
 - REGISTER: Match the emotional register of each stanza exactly as the original shifts — tender, bitter, resigned, passionate.
-- METAPHOR: Idioms and culturally specific language must become vivid English equivalents with the same emotional weight, not literal translations.
+- METAPHOR: Idioms and culturally specific language must become vivid ${targetLabel} equivalents with the same emotional weight, not literal translations.
 - STRUCTURE: Preserve stanza breaks. Line count may flex slightly if it improves the poetry.
 - SELF-REVISION: Before responding, read the poem once as if you've never seen it. Revise any flat, stiff, or clichéd line.
 
-Reply with ONLY the final English poem. No explanations, no title, no original language text.
+Reply with ONLY the final ${targetLabel} poem. No explanations, no title, no original language text.
 
 Original:
-${spanishText.trim()}`;
+${sourceText.trim()}`;
 
     try {
       const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -254,7 +288,9 @@ ${spanishText.trim()}`;
 
       // Persist into the existing lyrics cache entry
       const cached = _getCached(cacheKey) || {};
-      cached.en = translation;
+      if (targetLang === 'en') cached.en = translation;
+      cached.translations = cached.translations || {};
+      cached.translations[targetLang] = translation;
       _setCached(cacheKey, cached);
 
       console.log('[Lyrics] Translation cached for:', cacheKey);
@@ -287,7 +323,7 @@ ${spanishText.trim()}`;
   return {
     getLyrics,
     translateLyrics,
-    looksSpanish: _looksSpanish,
+    needsTranslation: _needsTranslation,
     getCachedLyrics,
     clearCache
   };

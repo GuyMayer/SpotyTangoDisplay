@@ -30,9 +30,19 @@
         <div id="mode-toggle">
           <button class="mode-btn active" data-mode="milonga">Milonga</button>
           <button class="mode-btn" data-mode="lesson">Lesson</button>
-          <span id="lang-toggle-group" style="display:none;align-items:center;gap:4px;margin-left:8px">
-            <button class="lang-btn active" data-lang="es" title="Show original lyrics">ES</button>
-            <button class="lang-btn" data-lang="en" title="Show English translation">EN</button>
+          <span id="lang-toggle-group" style="display:none;align-items:center;gap:6px;margin-left:8px">
+            <label for="lyrics-target-select" style="font-size:11px;color:var(--text-muted);letter-spacing:0.05em">Lyrics</label>
+            <select id="lyrics-target-select" class="lang-select" title="Target language for lyric translation">
+              <option value="system">System</option>
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="it">Italian</option>
+              <option value="pt">Portuguese</option>
+              <option value="ru">Russian</option>
+              <option value="el">Greek</option>
+            </select>
           </span>
         </div>
       </div>
