@@ -1,6 +1,6 @@
 # SpotyTangoDisplay — Project Plan
 
-> **Version:** 1.3.0 | **Updated:** 2026-07-06 | **126+ commits**
+> **Version:** 1.5.7 | **Updated:** 2026-07-07 | **150+ commits**
 > **Live:** <https://guymayer.github.io/SpotyTangoDisplay/>
 
 ## What It Is
