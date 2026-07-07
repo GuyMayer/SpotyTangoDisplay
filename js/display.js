@@ -136,7 +136,14 @@ const Display = (() => {
 
     fetch('data/orchestras.json')
       .then(r => r.json())
-      .then(d => { _orchestras = d; })
+      .then(d => {
+        const normalized = {};
+        Object.keys(d).forEach(k => {
+          const nk = k.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          normalized[nk] = d[k];
+        });
+        _orchestras = normalized;
+      })
       .catch(() => {});
 
     const videoBtn   = document.getElementById('local-video-btn');

@@ -28,7 +28,16 @@ const Control = (() => {
   function _loadOrchestras() {
     _orchestrasLoad = fetch('data/orchestras.json')
       .then(r => r.json())
-      .then(d => { _orchestras = d; _orchestrasReady = true; })
+      .then(d => {
+        // Re-index with normalized (accent-free) keys so lookup always works
+        const normalized = {};
+        Object.keys(d).forEach(k => {
+          const nk = k.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          normalized[nk] = d[k];
+        });
+        _orchestras = normalized;
+        _orchestrasReady = true;
+      })
       .catch(() => { _orchestrasReady = true; });
     return _orchestrasLoad;
   }
