@@ -742,19 +742,32 @@ const Display = (() => {
       const trackKey = (data.title + '|' + (data.artist || '')).toLowerCase();
       _lessonTrackKey = trackKey;
 
-      // Strip remastered/live suffixes for story/lyric lookups so APIs get clean titles
+      // Strip remastered/live/singer suffixes for story/lyric lookups so APIs get clean titles.
       const cleanTitle = data.title
+        .replace(/\s*\((with|feat\.?|featuring)\s+[^)]*\)/gi, '')
         .replace(/\s*[-–([]?\s*(remaster(?:ed|izado)?|live|mono|stereo)\b[^)\]]*[)\]]?/gi, '')
         .replace(/\s*\(\d{4}\s+remaster[^)]*\)/gi, '')
+        .replace(/\s{2,}/g, ' ')
         .trim() || data.title;
 
+      // Clean artist for lyric/story lookups: remove "y su Orquesta Típica" etc.
+      const cleanArtist = (data.artist || '')
+        .replace(/\s+y\s+su\s+orquesta\s+tipica.*$/i, '')
+        .replace(/\s+y\s+su\s+orquesta.*$/i, '')
+        .replace(/\s+and\s+his\s+orchestra.*$/i, '')
+        .replace(/\s+orquesta\s+tipica.*$/i, '')
+        .replace(/\s+orchestra.*$/i, '')
+        .replace(/\s+sexteto.*$/i, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim() || data.artist;
+
       // Check if it's a tango song (use clean title for lookup)
-      const isTango = typeof TangoDB !== 'undefined' && TangoDB.lookupSync(cleanTitle, data.artist).type !== null;
+      const isTango = typeof TangoDB !== 'undefined' && TangoDB.lookupSync(cleanTitle, cleanArtist).type !== null;
       
       if (isTango) {
         // Tango: try story first, lyrics fallback
         if (typeof LastFm !== 'undefined') {
-          LastFm.fetchTrackInfo(cleanTitle, data.artist).then(info => {
+          LastFm.fetchTrackInfo(cleanTitle, cleanArtist).then(info => {
             if (_lessonTrackKey !== trackKey) return; // stale
             if (info && info.story) {
               _applyStory(info.story);
@@ -762,21 +775,21 @@ const Display = (() => {
               _stopKaraokeSync();
             } else {
               // No story, try lyrics then provenance
-              _tryFetchLyrics(cleanTitle, data.artist, trackKey, data, () => _showFallbackContent(data, trackKey));
+              _tryFetchLyrics(cleanTitle, cleanArtist, trackKey, data, () => _showFallbackContent(data, trackKey));
             }
           }).catch(() => { 
-            if (_lessonTrackKey === trackKey) _tryFetchLyrics(cleanTitle, data.artist, trackKey, data, () => _showFallbackContent(data, trackKey));
+            if (_lessonTrackKey === trackKey) _tryFetchLyrics(cleanTitle, cleanArtist, trackKey, data, () => _showFallbackContent(data, trackKey));
           });
         } else {
-          _tryFetchLyrics(cleanTitle, data.artist, trackKey, data, () => _showFallbackContent(data, trackKey));
+          _tryFetchLyrics(cleanTitle, cleanArtist, trackKey, data, () => _showFallbackContent(data, trackKey));
         }
       } else {
         // Non-tango: try lyrics first, story fallback
-        _tryFetchLyrics(cleanTitle, data.artist, trackKey, data, () => {
+        _tryFetchLyrics(cleanTitle, cleanArtist, trackKey, data, () => {
           // Lyrics not found, try story
           if (_lessonTrackKey !== trackKey) return;
           if (typeof LastFm !== 'undefined') {
-            LastFm.fetchTrackInfo(cleanTitle, data.artist).then(info => {
+            LastFm.fetchTrackInfo(cleanTitle, cleanArtist).then(info => {
               if (_lessonTrackKey !== trackKey) return;
               if (info && info.story) {
                 _applyStory(info.story);
