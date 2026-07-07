@@ -220,7 +220,7 @@ ${spanishText.trim()}`;
           'HTTP-Referer': 'http://127.0.0.1:3456/',
         },
         body: JSON.stringify({
-          models: ['anthropic/claude-sonnet-4.6', 'anthropic/claude-sonnet-4.5'],
+          models: ['anthropic/claude-opus-4.8', 'anthropic/claude-sonnet-4.6'],
           route: 'fallback',
           max_tokens: 800,
           temperature: 0.7,

@@ -238,6 +238,9 @@ const Display = (() => {
           data.orchLookupDone && !data.orchestraBio && !_currentOrchBio) {
         // Bio lookup finished with no result — clear "Looking up..."
         els.lessonOrchStyle.textContent = '';
+      } else if (data.orchBioUpdate && incomingKey !== _currentTrackKey) {
+        // Stale bio update for a track that's no longer playing — discard
+        return;
       } else {
         _currentTrackKey = incomingKey;
         _currentOrchBio  = data.orchestraBio || null;

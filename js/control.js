@@ -1178,7 +1178,7 @@ const Control = (() => {
     // Helper: cache null and notify display to clear "Looking up..."
     const _fail = () => {
       _orchestraBioCache[key] = null;
-      _pushState(Object.assign({}, basePayload, { orchestraBio: null, orchLookupDone: true }));
+      _pushState(Object.assign({}, basePayload, { orchestraBio: null, orchLookupDone: true, orchBioUpdate: true }));
     };
 
     // 1. Try Wikipedia (free, no key)
@@ -1186,7 +1186,7 @@ const Control = (() => {
     if (wikiBio) {
       _orchestraBioCache[key] = wikiBio;
       try { localStorage.setItem(ORCHESTRA_CACHE_KEY, JSON.stringify(_orchestraBioCache)); } catch (e) {}
-      _pushState(Object.assign({}, basePayload, { orchestraBio: wikiBio }));
+      _pushState(Object.assign({}, basePayload, { orchestraBio: wikiBio, orchBioUpdate: true }));
       return;
     }
 
@@ -1211,7 +1211,7 @@ const Control = (() => {
               const lfmBio = { name: artistName, nickname: '', era: '', style: '', characteristics: [clean], notable_singers: [] };
               _orchestraBioCache[key] = lfmBio;
               try { localStorage.setItem(ORCHESTRA_CACHE_KEY, JSON.stringify(_orchestraBioCache)); } catch (e) {}
-              _pushState(Object.assign({}, basePayload, { orchestraBio: lfmBio }));
+              _pushState(Object.assign({}, basePayload, { orchestraBio: lfmBio, orchBioUpdate: true }));
               return;
             }
           }
@@ -1249,7 +1249,7 @@ const Control = (() => {
       const bio = JSON.parse(jsonStr);
       _orchestraBioCache[key] = bio;
       try { localStorage.setItem(ORCHESTRA_CACHE_KEY, JSON.stringify(_orchestraBioCache)); } catch (e) {}
-      _pushState(Object.assign({}, basePayload, { orchestraBio: bio }));
+      _pushState(Object.assign({}, basePayload, { orchestraBio: bio, orchBioUpdate: true }));
     } catch (e) {
       _fail();
     }
