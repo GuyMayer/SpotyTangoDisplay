@@ -168,6 +168,87 @@ const LyricsModule = (() => {
   }
 
   /**
+   * Detect if text is likely Spanish tango lyrics.
+   */
+  function _looksSpanish(text) {
+    if (!text || text.length < 30) return false;
+    const sample = text.substring(0, 600).toLowerCase();
+    const markers = [' que ', ' mi ', ' amor', ' un ', ' con ', ' como ', ' tu ', ' de ', ' para ', ' no ', ' es ', ' en ', ' yo ', ' una '];
+    const hits = markers.filter(w => sample.includes(w));
+    return hits.length >= 4;
+  }
+
+  /**
+   * Translate Spanish lyrics to poetic English using Claude Sonnet via OpenRouter.
+   * Caches the result permanently in the lyrics cache.
+   * @returns {Promise<string|null>} English translation, or null if unavailable.
+   */
+  async function translateLyrics(title, artist, spanishText, cacheKey) {
+    if (!spanishText || !spanishText.trim()) return null;
+
+    // Return cached translation immediately if available
+    const existing = _getCached(cacheKey);
+    if (existing && existing.en) return existing.en;
+
+    const apiKey = localStorage.getItem('spotd_openrouter_key');
+    if (!apiKey) return null;
+
+    const prompt = `You are an Argentine tango poet and literary translator.
+Translate the tango lyric below from Spanish to English using the "imitation" approach — not word-for-word, not paraphrase, but a free recreation that preserves the spirit, emotional texture, and poetic imagery of the original.
+
+Your reader is an English speaker at a Buenos Aires milonga. They cannot understand Spanish. They want to feel what this song is about — the longing, the loss, the passion, the bittersweet nostalgia. Make them feel it.
+
+Guidelines:
+- Preserve the emotional register of each line: if a line is tender, be tender; if bitter, be bitter; if resigned, be resigned
+- Lunfardo (Buenos Aires slang) should be rendered as vivid idiomatic English, not literally — convey the meaning and tone, not the word
+- Where a metaphor doesn't translate directly, find an equivalent English image with the same emotional weight (e.g. "hauls her desire" not "drags desire" — weight matters)
+- Keep verse and stanza structure: same number of lines, blank lines between stanzas
+- Avoid clichés unless the original is intentionally using one
+- After completing the translation, review it once for any lines that sound awkward or un-poetic, and improve them before responding
+
+Reply with ONLY the final English translation. No explanations, no notes, no Spanish.
+
+Spanish original:
+${spanishText.trim()}`;
+
+    try {
+      const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + apiKey,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'http://127.0.0.1:3456/',
+        },
+        body: JSON.stringify({
+          models: ['anthropic/claude-sonnet-4.5', 'anthropic/claude-sonnet-4'],
+          route: 'fallback',
+          max_tokens: 800,
+          temperature: 0.7,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+
+      if (!resp.ok) return null;
+      const data = await resp.json();
+      const en = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      if (!en || en.trim().length < 10) return null;
+
+      const translation = en.trim();
+
+      // Persist into the existing lyrics cache entry
+      const cached = _getCached(cacheKey) || {};
+      cached.en = translation;
+      _setCached(cacheKey, cached);
+
+      console.log('[Lyrics] Translation cached for:', cacheKey);
+      return translation;
+    } catch (err) {
+      console.warn('[Lyrics] Translation error:', err.message || err);
+      return null;
+    }
+  }
+
+  /**
    * Get all cached lyrics (for contribution)
    */
   function getCachedLyrics() {
@@ -188,6 +269,8 @@ const LyricsModule = (() => {
 
   return {
     getLyrics,
+    translateLyrics,
+    looksSpanish: _looksSpanish,
     getCachedLyrics,
     clearCache
   };

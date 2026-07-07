@@ -794,35 +794,110 @@ const Display = (() => {
 
   function _applyStory(text) {
     const rightPanel = document.getElementById('lesson-right');
+    _showLangToggle(false);
     els.lessonStory.textContent = text || '';
     if (rightPanel && text) requestAnimationFrame(() => _fitTextToPanel(els.lessonStory, rightPanel, 16, 9));
   }
 
-  function _applyLyrics(lyrics, position) {
-    if (!lyrics) {
-      els.lessonStory.innerHTML = '';
-      els.lessonThemes.textContent = '';
-      _currentLyrics = null;
-      return;
-    }
-    const rightPanel = document.getElementById('lesson-right');
-    _currentLyrics = lyrics;
+  // Show ES / EN language toggle; hidden by default, revealed when EN is available
+  function _showLangToggle(show) {
+    const toggle = document.getElementById('lyrics-lang-toggle');
+    if (!toggle) return;
+    if (show) toggle.classList.remove('hidden');
+    else       toggle.classList.add('hidden');
+  }
 
+  function _setActiveLang(lang) {
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.lang === lang);
+    });
+  }
+
+  function _renderLyricsEs(lyrics, position, rightPanel) {
+    rightPanel = rightPanel || document.getElementById('lesson-right');
     if (lyrics.synced && lyrics.synced.length > 0) {
       els.lessonStory.innerHTML = lyrics.synced.map((line, idx) =>
         `<div class="lyric-line" data-time="${line.time}" data-idx="${idx}">${line.text || '&nbsp;'}</div>`
       ).join('');
       els.lessonThemes.textContent = 'Source: ' + lyrics.source;
       _startKaraokeSync(position || 0);
-    } else if (lyrics.es || lyrics.en) {
-      const text = lyrics.en || lyrics.es || '';
-      els.lessonStory.textContent = text;
-      els.lessonThemes.textContent = 'Lyrics' + (lyrics.en && lyrics.es ? ' (Translated)' : '');
-      if (rightPanel && text) requestAnimationFrame(() => _fitTextToPanel(els.lessonStory, rightPanel, 14, 9));
+    } else if (lyrics.es) {
+      _stopKaraokeSync();
+      els.lessonStory.textContent = lyrics.es;
+      els.lessonThemes.textContent = 'Lyrics';
+      if (rightPanel && lyrics.es) requestAnimationFrame(() => _fitTextToPanel(els.lessonStory, rightPanel, 14, 9));
     } else if (lyrics.text) {
+      _stopKaraokeSync();
       els.lessonStory.textContent = lyrics.text;
       els.lessonThemes.textContent = 'Lyrics: ' + lyrics.source;
       if (rightPanel && lyrics.text) requestAnimationFrame(() => _fitTextToPanel(els.lessonStory, rightPanel, 14, 9));
+    }
+  }
+
+  function _renderLyricsEn(lyrics) {
+    const rightPanel = document.getElementById('lesson-right');
+    _stopKaraokeSync();
+    els.lessonStory.textContent = lyrics.en || '';
+    els.lessonThemes.textContent = 'English translation';
+    if (rightPanel && lyrics.en) requestAnimationFrame(() => _fitTextToPanel(els.lessonStory, rightPanel, 14, 9));
+  }
+
+  function _bindLangToggle(lyrics, position) {
+    const toggle = document.getElementById('lyrics-lang-toggle');
+    if (!toggle) return;
+    const fresh = toggle.cloneNode(true);
+    toggle.parentNode.replaceChild(fresh, toggle);
+    fresh.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        _setActiveLang(btn.dataset.lang);
+        if (btn.dataset.lang === 'en') {
+          _renderLyricsEn(lyrics);
+        } else {
+          _renderLyricsEs(lyrics, position);
+        }
+      });
+    });
+  }
+
+  function _applyLyrics(lyrics, position, title, artist, cacheKey) {
+    if (!lyrics) {
+      els.lessonStory.innerHTML = '';
+      els.lessonThemes.textContent = '';
+      _showLangToggle(false);
+      _currentLyrics = null;
+      return;
+    }
+    const rightPanel = document.getElementById('lesson-right');
+    _currentLyrics = lyrics;
+
+    // Show toggle immediately if EN already cached
+    if (lyrics.en) {
+      _showLangToggle(true);
+      _setActiveLang('es');
+      _bindLangToggle(lyrics, position);
+    } else {
+      _showLangToggle(false);
+    }
+
+    // Render Spanish / karaoke
+    _renderLyricsEs(lyrics, position, rightPanel);
+
+    // Background translation: detect Spanish, fire-and-forget
+    if (!lyrics.en && typeof LyricsModule !== 'undefined' && cacheKey) {
+      const textToTranslate = lyrics.text ||
+        (lyrics.synced ? lyrics.synced.map(l => l.text).filter(Boolean).join('\n') : '') ||
+        lyrics.es || '';
+      if (textToTranslate && LyricsModule.looksSpanish(textToTranslate)) {
+        const snapshot = _lessonTrackKey;
+        LyricsModule.translateLyrics(title || '', artist || '', textToTranslate, cacheKey)
+          .then(en => {
+            if (!en || _lessonTrackKey !== snapshot) return;
+            lyrics.en = en;
+            _showLangToggle(true);
+            _setActiveLang('es');
+            _bindLangToggle(lyrics, position);
+          });
+      }
     }
   }
 
@@ -836,7 +911,10 @@ const Display = (() => {
     LyricsModule.getLyrics(title, artist).then(lyrics => {
       if (_lessonTrackKey !== trackKey) return; // stale
       if (lyrics) {
-        _applyLyrics(lyrics, data.progressMs || 0);
+        const cacheKey = (typeof LyricsModule !== 'undefined')
+          ? (title.toLowerCase().replace(/[^a-z0-9 ]/g,'').trim() + '|' + artist.toLowerCase().replace(/[^a-z0-9 ]/g,'').trim())
+          : null;
+        _applyLyrics(lyrics, data.progressMs || 0, title, artist, cacheKey);
       } else {
         if (onNotFound) onNotFound();
         else _showFallbackContent(data, trackKey);
