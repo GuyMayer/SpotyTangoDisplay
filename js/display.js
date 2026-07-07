@@ -221,13 +221,16 @@ const Display = (() => {
     if (data.isCortina && format === 'tandas-cortinas') {
       _transitionTo('cortina', () => _renderCortina(data, mode));
     } else {
-      // If same track is already showing and only orchestraBio changed,
-      // update LEFT panel only — do NOT re-run the story/lyrics chain
       const incomingKey = (data.title || '') + '|' + (data.artist || '');
       if (_currentState === 'track' && incomingKey === _currentTrackKey &&
           data.orchestraBio && !_currentOrchBio) {
+        // Bio arrived — update left panel only
         _currentOrchBio = data.orchestraBio;
         _updateOrchBioOnly(data.orchestraBio, data.artist);
+      } else if (_currentState === 'track' && incomingKey === _currentTrackKey &&
+          data.orchLookupDone && !data.orchestraBio && !_currentOrchBio) {
+        // Bio lookup finished with no result — clear "Looking up..."
+        els.lessonOrchStyle.textContent = '';
       } else {
         _currentTrackKey = incomingKey;
         _currentOrchBio  = data.orchestraBio || null;

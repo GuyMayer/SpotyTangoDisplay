@@ -1150,10 +1150,17 @@ const Control = (() => {
 
     if (key in _orchestraBioCache) {
       if (_orchestraBioCache[key]) _pushState(Object.assign({}, basePayload, { orchestraBio: _orchestraBioCache[key] }));
+      else _pushState(Object.assign({}, basePayload, { orchestraBio: null, orchLookupDone: true }));
       return;
     }
 
-    // 1. Try Wikipedia (free, no key) — instant, works for famous orchestras
+    // Helper: cache null and notify display to clear "Looking up..."
+    const _fail = () => {
+      _orchestraBioCache[key] = null;
+      _pushState(Object.assign({}, basePayload, { orchestraBio: null, orchLookupDone: true }));
+    };
+
+    // 1. Try Wikipedia (free, no key)
     const wikiBio = await _tryWikipediaOrchestra(artistName);
     if (wikiBio) {
       _orchestraBioCache[key] = wikiBio;
@@ -1162,9 +1169,38 @@ const Control = (() => {
       return;
     }
 
-    // 2. Fallback: OpenRouter AI (configured, works for any orchestra incl. modern)
+    // 2. Try Last.fm artist.getInfo (free, returns editorial bio if key set)
+    const lastfmKey = localStorage.getItem('spotd_lastfm_key');
+    if (lastfmKey) {
+      try {
+        const params = new URLSearchParams({
+          method: 'artist.getinfo',
+          artist: artistName,
+          api_key: lastfmKey,
+          format: 'json',
+        });
+        const r = await fetch('https://ws.audioscrobbler.com/2.0/?' + params);
+        if (r.ok) {
+          const d = await r.json();
+          const bio = d.artist && d.artist.bio && d.artist.bio.summary;
+          if (bio && bio.length > 40) {
+            // Strip the "Read more on Last.fm" trailer and HTML links
+            const clean = bio.replace(/<a[^>]*>.*?<\/a>/gi, '').replace(/\.\s*Read more on Last\.fm\.?$/i, '').replace(/<[^>]+>/g, '').trim();
+            if (clean.length > 40) {
+              const lfmBio = { name: artistName, nickname: '', era: '', style: '', characteristics: [clean], notable_singers: [] };
+              _orchestraBioCache[key] = lfmBio;
+              try { localStorage.setItem(ORCHESTRA_CACHE_KEY, JSON.stringify(_orchestraBioCache)); } catch (e) {}
+              _pushState(Object.assign({}, basePayload, { orchestraBio: lfmBio }));
+              return;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 3. Fallback: OpenRouter AI
     const apiKey = localStorage.getItem('spotd_openrouter_key');
-    if (!apiKey) { _orchestraBioCache[key] = null; return; }
+    if (!apiKey) { _fail(); return; }
 
     try {
       const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -1184,17 +1220,17 @@ const Control = (() => {
           }],
         }),
       });
-      if (!resp.ok) { _orchestraBioCache[key] = null; return; }
+      if (!resp.ok) { _fail(); return; }
       const data = await resp.json();
       const raw = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-      if (!raw) { _orchestraBioCache[key] = null; return; }
+      if (!raw) { _fail(); return; }
       const jsonStr = raw.replace(/^```[\s\S]*?\n/, '').replace(/```$/, '').trim();
       const bio = JSON.parse(jsonStr);
       _orchestraBioCache[key] = bio;
       try { localStorage.setItem(ORCHESTRA_CACHE_KEY, JSON.stringify(_orchestraBioCache)); } catch (e) {}
       _pushState(Object.assign({}, basePayload, { orchestraBio: bio }));
     } catch (e) {
-      _orchestraBioCache[key] = null;
+      _fail();
     }
   }
 
