@@ -88,7 +88,7 @@ const Control = (() => {
       .trim();
   }
 
-  function _getCoverInfo(title, artistName) {
+  function _getCoverInfoSync(title, artistName) {
     if (!title || !artistName || typeof TangoDB === 'undefined') return '';
     const recordings = TangoDB.searchByTitle(title);
     if (!recordings || recordings.length === 0) return '';
@@ -102,6 +102,15 @@ const Control = (() => {
     const originalLabel = earliest.artist.replace(/\b\w/g, c => c.toUpperCase());
     const yearLabel = earliest.year ? ' (' + earliest.year + ')' : '';
     return 'Original: ' + originalLabel + yearLabel;
+  }
+
+  async function _getCoverInfo(title, artistName) {
+    if (!title || !artistName || typeof TangoDB === 'undefined') return '';
+    // Ensure TangoDB has finished loading before searching
+    if (TangoDB.preload) {
+      try { await TangoDB.preload(); } catch {}
+    }
+    return _getCoverInfoSync(title, artistName);
   }
 
   // ── Local setup nudge for GitHub Pages visitors ──────────────────────────
@@ -775,7 +784,7 @@ const Control = (() => {
       nextArtist,
       nextGenre,
       nextLabel,
-      composerInfo: _getCoverInfo(track.name, artistName),
+      composerInfo: _getCoverInfoSync(track.name, artistName),
       orchestraBio: _getOrchestraBio(artistName),
       songStory: _storyCurrentText || undefined,
       lang: _resolveLyricsTargetLang(),
@@ -787,6 +796,13 @@ const Control = (() => {
 
     // Async: translate title if it looks Spanish, then push an update
     _maybeTranslateTitle(track.name, payload);
+
+    // Async: ensure TangoDB loaded, then re-check cover info (may have been empty on first payload)
+    _getCoverInfo(track.name, artistName).then(info => {
+      if (info && info !== payload.composerInfo) {
+        _pushState(Object.assign({}, payload, { composerInfo: info }));
+      }
+    });
 
     // Async: fetch AI orchestra bio if not in local DB
     if (!payload.orchestraBio) _maybeFetchOrchestraBio(artistName, payload);
@@ -1212,9 +1228,18 @@ const Control = (() => {
   // ── Title translation ─────────────────────────────────────────────────────
 
   function _looksSpanish(title) {
+    if (!title) return false;
+    // Accented characters or Spanish punctuation
     if (/[áéíóúüñ¿¡]/i.test(title)) return true;
     // Quoted titles (straight or curly quotes) — common in Argentine tango track names
     if (/[""\u201c\u201d'"'']/.test(title)) return true;
+    // Common Spanish function words in tango titles (no accents needed)
+    const lc = title.toLowerCase();
+    const spanishWords = [' que ', ' de ', ' la ', ' el ', ' los ', ' las ', ' un ', ' una ', ' con ', ' por ', ' para ', ' mi ', ' tu ', ' su '];
+    const wordHits = spanishWords.filter(w => lc.includes(w)).length;
+    if (wordHits >= 2) return true;
+    // Common tango title keywords
+    if (/\b(amor|corazon|alma|vida|volver|sueno|noche|luna|flor|tango|milonga|sombras|nube|camino|beso|llorar|pena|dolor|madre|hermano|amigo|arrabal|malevo|cumparsita|choclo|milonguita|patotero)\b/i.test(title)) return true;
     return false;
   }
 
